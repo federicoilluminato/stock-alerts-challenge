@@ -1,0 +1,37 @@
+{
+  "name": "challenge-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo/AppEntry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web",
+    "lint": "eslint \"src/**/*.{ts,tsx}\""
+  },
+  "dependencies": {
+    "@react-navigation/native": "^7.0.0",
+    "@react-navigation/native-stack": "^7.0.0",
+    "@tanstack/react-query": "^5.62.0",
+    "axios": "^1.7.9",
+    "expo": "^53.0.0",
+    "expo-secure-store": "^14.0.0",
+    "react": "^19.0.0",
+    "react-native": "^0.79.0",
+    "react-native-safe-area-context": "^5.0.0",
+    "react-native-screens": "^4.4.0",
+    "socket.io-client": "^4.8.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.26.0",
+    "@eslint/js": "^9.15.0",
+    "@types/react": "^19.0.0",
+    "eslint": "^9.15.0",
+    "prettier": "^3.3.3",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.15.0"
+  }
+}
+

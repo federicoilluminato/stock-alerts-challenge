@@ -1,0 +1,20 @@
+{
+  "name": "stock-alerts-challenge",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
+    "dev:backend": "npm run dev --workspace backend",
+    "dev:frontend": "npm run start --workspace frontend",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down"
+  },
+  "devDependencies": {
+    "prettier": "^3.3.3"
+  }
+}
+
