@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { CandlestickChart } from 'react-native-wagmi-charts';
+import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
+import { CandlestickChart } from '../components/CandlestickChart';
 import type { RootStackParamList } from '../navigation/types';
 import { getCandles, getQuote } from '../services/stocks/market';
 
@@ -10,6 +10,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
 export const StockDetailScreen = ({ route, navigation }: Props) => {
   const { symbol, name } = route.params;
+  const { width: screenWidth } = useWindowDimensions();
 
   const candlesQuery = useQuery({
     queryKey: ['candles', symbol],
@@ -35,11 +36,15 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
     );
   }
 
+  const errorMessage = candlesQuery.error instanceof Error ? candlesQuery.error.message
+    : quoteQuery.error instanceof Error ? quoteQuery.error.message
+    : 'Failed to load chart data';
+
   if (isError) {
     return (
       <ScreenContainer>
         <View style={styles.centeredState}>
-          <Text style={styles.errorText}>Failed to load chart data.</Text>
+          <Text style={styles.errorText}>{errorMessage}</Text>
           <Pressable style={styles.retryButton} onPress={() => { candlesQuery.refetch(); quoteQuery.refetch(); }}>
             <Text style={styles.retryButtonText}>Retry</Text>
           </Pressable>
@@ -70,22 +75,18 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
         <Text style={styles.rangeLabel}>H {quote.high.toFixed(2)}</Text>
       </View>
       {candles.length > 0 ? (
-        <View style={styles.chartContainer}>
-          <CandlestickChart.Provider data={candles}>
-            <CandlestickChart height={280}>
-              <CandlestickChart.Candles
-                positiveColor="#22c55e"
-                negativeColor="#ef4444"
-              />
-              <CandlestickChart.Crosshair />
-            </CandlestickChart>
-          </CandlestickChart.Provider>
-        </View>
+        <CandlestickChart data={candles} width={screenWidth - 48} />
       ) : (
         <View style={styles.centeredState}>
           <Text style={styles.stateText}>No chart data available.</Text>
         </View>
       )}
+      <Pressable
+        style={styles.alertButton}
+        onPress={() => navigation.navigate('CreateAlert', { symbol, name })}
+      >
+        <Text style={styles.alertButtonText}>Set Alert for {symbol}</Text>
+      </Pressable>
     </ScreenContainer>
   );
 };
@@ -134,10 +135,6 @@ const styles = StyleSheet.create({
     color: '#64748b',
     fontSize: 12,
   },
-  chartContainer: {
-    flex: 1,
-    marginBottom: 20,
-  },
   centeredState: {
     alignItems: 'center',
     flex: 1,
@@ -159,6 +156,18 @@ const styles = StyleSheet.create({
   },
   retryButtonText: {
     color: '#ffffff',
+    fontWeight: '600',
+  },
+  alertButton: {
+    alignItems: 'center',
+    backgroundColor: '#3b3f7a',
+    borderRadius: 8,
+    marginTop: 12,
+    paddingVertical: 14,
+  },
+  alertButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
     fontWeight: '600',
   },
 });

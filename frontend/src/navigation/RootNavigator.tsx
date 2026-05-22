@@ -1,5 +1,6 @@
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AlertsScreen } from '../screens/AlertsScreen';
+import { CreateAlertScreen } from '../screens/CreateAlertScreen';
 import { HomeScreen } from '../screens/HomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
@@ -25,6 +26,7 @@ export const RootNavigator = () => {
       <Stack.Screen name="Stocks" component={StocksScreen} />
       <Stack.Screen name="StockDetail" component={StockDetailScreen} options={({ route }) => ({ title: route.params.symbol })} />
       <Stack.Screen name="Alerts" component={AlertsScreen} />
+      <Stack.Screen name="CreateAlert" component={CreateAlertScreen} options={{ title: 'New Alert' }} />
     </Stack.Navigator>
   );
 };

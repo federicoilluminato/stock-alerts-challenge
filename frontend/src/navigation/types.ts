@@ -5,5 +5,6 @@ export type RootStackParamList = {
   Stocks: undefined;
   StockDetail: { symbol: string; name: string };
   Alerts: undefined;
+  CreateAlert: { symbol: string; name: string } | undefined;
 };
 
