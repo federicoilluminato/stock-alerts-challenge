@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
@@ -123,7 +124,11 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
       </Pressable>
 
       {mutation.isError && (
-        <Text style={styles.errorText}>Failed to create alert. Try again.</Text>
+        <Text style={styles.errorText}>
+          {axios.isAxiosError(mutation.error)
+            ? mutation.error.response?.data?.error?.message ?? 'Failed to create alert. Try again.'
+            : 'Failed to create alert. Try again.'}
+        </Text>
       )}
     </ScreenContainer>
   );
