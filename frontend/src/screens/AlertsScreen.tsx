@@ -20,25 +20,19 @@ export const AlertsScreen = ({ navigation }: Props) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
-  });
-
-  const evaluateMutation = useMutation({
-    mutationFn: evaluateAlerts,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['alerts'] });
-      if (data.triggered.length > 0) {
-        const names = data.triggered.map((a) => `${a.symbol} ($${a.currentPrice.toFixed(2)})`).join('\n');
-        RNAlert.alert('Alerts Triggered!', names);
-      } else {
-        RNAlert.alert('No alerts triggered', 'All active alerts are below their target prices.');
-      }
+    onError: () => {
+      RNAlert.alert('Error', 'Failed to delete alert. Please try again.');
     },
   });
 
   const handleDelete = (id: string, symbol: string) => {
     RNAlert.alert('Delete Alert', `Remove alert for ${symbol}?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => deleteMutation.mutate(id),
+      },
     ]);
   };
 
@@ -85,8 +79,12 @@ export const AlertsScreen = ({ navigation }: Props) => {
                       {item.status === 'triggered' ? 'Triggered' : item.status === 'active' ? 'Active' : item.status}
                     </Text>
                   </View>
-                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)}>
-                    <Text style={styles.deleteButtonText}>X</Text>
+                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)} disabled={deleteMutation.isPending}>
+                    {deleteMutation.isPending ? (
+                      <ActivityIndicator color="#f87171" size="small" />
+                    ) : (
+                      <Text style={styles.deleteButtonText}>X</Text>
+                    )}
                   </Pressable>
                 </View>
               )}
