@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "394351542190",
+    "project_id": "project-e8e2b",
+    "storage_bucket": "project-e8e2b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:394351542190:android:f9aa0a5a60a23be8ead23f",
+        "android_client_info": {
+          "package_name": "com.fedeillu.stockalertschallenge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBaidiyD554HILH311ebOtznX8NWOqUEJU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
