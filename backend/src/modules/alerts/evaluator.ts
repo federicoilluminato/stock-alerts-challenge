@@ -7,6 +7,13 @@ type QuoteResponse = {
   c: number;
 };
 
+type TriggeredAlert = {
+  id: string;
+  symbol: string;
+  targetPrice: number;
+  currentPrice: number;
+};
+
 const POLL_INTERVAL_MS = 60_000;
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
@@ -23,10 +30,12 @@ const getCurrentPrice = async (symbol: string): Promise<number> => {
   return response.data.c;
 };
 
-const evaluateAlerts = async (): Promise<void> => {
+export const evaluateAlerts = async (): Promise<TriggeredAlert[]> => {
+  const triggered: TriggeredAlert[] = [];
+
   try {
     const activeAlerts = await prisma.alert.findMany({ where: { status: 'active' } });
-    if (activeAlerts.length === 0) return;
+    if (activeAlerts.length === 0) return triggered;
 
     const uniqueSymbols = [...new Set(activeAlerts.map((a) => a.symbol))];
     const prices = new Map<string, number>();
@@ -54,6 +63,8 @@ const evaluateAlerts = async (): Promise<void> => {
           data: { status: 'triggered', triggeredAt: new Date() },
         });
 
+        triggered.push({ id: alert.id, symbol: alert.symbol, targetPrice: alert.targetPrice, currentPrice });
+
         const tokens = await prisma.pushToken.findMany({
           where: { userId: alert.userId },
         });
@@ -66,6 +77,8 @@ const evaluateAlerts = async (): Promise<void> => {
   } catch (error) {
     console.error('[evaluator] Error evaluating alerts:', error);
   }
+
+  return triggered;
 };
 
 export const startAlertEvaluator = (): void => {

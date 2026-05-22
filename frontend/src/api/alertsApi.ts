@@ -24,6 +24,16 @@ export const createAlert = async (input: CreateAlertInput): Promise<Alert> => {
   return response.data;
 };
 
-export const deleteAlert = async (id: string): Promise<void> => {
-  await apiClient.delete(`/alerts/${id}`);
+export type EvaluateResponse = {
+  triggered: Array<{
+    id: string;
+    symbol: string;
+    targetPrice: number;
+    currentPrice: number;
+  }>;
+};
+
+export const evaluateAlerts = async (): Promise<EvaluateResponse> => {
+  const response = await apiClient.post<EvaluateResponse>('/alerts/evaluate');
+  return response.data;
 };

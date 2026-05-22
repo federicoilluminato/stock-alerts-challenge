@@ -1,9 +1,9 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert as RNAlert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
-import { deleteAlert, fetchAlerts } from '../api/alertsApi';
+import { deleteAlert, evaluateAlerts, fetchAlerts } from '../api/alertsApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Alerts'>;
 
@@ -22,12 +22,27 @@ export const AlertsScreen = ({ navigation }: Props) => {
     },
   });
 
+  const evaluateMutation = useMutation({
+    mutationFn: evaluateAlerts,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      if (data.triggered.length > 0) {
+        const names = data.triggered.map((a) => `${a.symbol} ($${a.currentPrice.toFixed(2)})`).join('\n');
+        RNAlert.alert('Alerts Triggered!', names);
+      } else {
+        RNAlert.alert('No alerts triggered', 'All active alerts are below their target prices.');
+      }
+    },
+  });
+
   const handleDelete = (id: string, symbol: string) => {
-    Alert.alert('Delete Alert', `Remove alert for ${symbol}?`, [
+    RNAlert.alert('Delete Alert', `Remove alert for ${symbol}?`, [
       { text: 'Cancel', style: 'cancel' },
       { text: 'Delete', style: 'destructive', onPress: () => deleteMutation.mutate(id) },
     ]);
   };
+
+  const hasActiveAlerts = alerts?.some((a) => a.status === 'active');
 
   return (
     <ScreenContainer>
@@ -40,33 +55,50 @@ export const AlertsScreen = ({ navigation }: Props) => {
 
       {isLoading ? (
         <ActivityIndicator color="#60a5fa" style={styles.loader} />
-      ) : alerts && alerts.length > 0 ? (
-        <FlatList
-          data={alerts}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.alertCard}>
-              <View style={styles.alertInfo}>
-                <Text style={styles.alertSymbol}>{item.symbol}</Text>
-                <Text style={styles.alertDetail}>
-                  Target: ${item.targetPrice.toFixed(2)}
-                </Text>
-                <Text style={styles.alertStatus}>
-                  {item.status === 'triggered' ? 'Triggered' : item.status === 'active' ? 'Active' : item.status}
-                </Text>
-              </View>
-              <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)}>
-                <Text style={styles.deleteButtonText}>X</Text>
-              </Pressable>
+      ) : (
+        <>
+          {hasActiveAlerts && (
+            <Pressable
+              style={[styles.checkButton, evaluateMutation.isPending && styles.checkButtonDisabled]}
+              onPress={() => evaluateMutation.mutate()}
+              disabled={evaluateMutation.isPending}
+            >
+              {evaluateMutation.isPending ? (
+                <ActivityIndicator color="#ffffff" size="small" />
+              ) : (
+                <Text style={styles.checkButtonText}>Check Alerts</Text>
+              )}
+            </Pressable>
+          )}
+          {alerts && alerts.length > 0 ? (
+            <FlatList
+              data={alerts}
+              keyExtractor={(item) => item.id}
+              renderItem={({ item }) => (
+                <View style={styles.alertCard}>
+                  <View style={styles.alertInfo}>
+                    <Text style={styles.alertSymbol}>{item.symbol}</Text>
+                    <Text style={styles.alertDetail}>
+                      Target: ${item.targetPrice.toFixed(2)}
+                    </Text>
+                    <Text style={styles.alertStatus}>
+                      {item.status === 'triggered' ? 'Triggered' : item.status === 'active' ? 'Active' : item.status}
+                    </Text>
+                  </View>
+                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)}>
+                    <Text style={styles.deleteButtonText}>X</Text>
+                  </Pressable>
+                </View>
+              )}
+              contentContainerStyle={styles.list}
+            />
+          ) : (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyText}>No alerts yet.</Text>
+              <Text style={styles.emptyHint}>Tap + to create one.</Text>
             </View>
           )}
-          contentContainerStyle={styles.list}
-        />
-      ) : (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyText}>No alerts yet.</Text>
-          <Text style={styles.emptyHint}>Tap + to create one.</Text>
-        </View>
+        </>
       )}
     </ScreenContainer>
   );
@@ -137,6 +169,21 @@ const styles = StyleSheet.create({
     color: '#f87171',
     fontSize: 18,
     fontWeight: '700',
+  },
+  checkButton: {
+    alignItems: 'center',
+    backgroundColor: '#2563eb',
+    borderRadius: 8,
+    marginBottom: 16,
+    paddingVertical: 12,
+  },
+  checkButtonDisabled: {
+    opacity: 0.6,
+  },
+  checkButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
   },
   emptyState: {
     alignItems: 'center',
