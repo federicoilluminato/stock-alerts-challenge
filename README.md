@@ -1,8 +1,6 @@
 # Stock Alerts Technical Challenge
 
-Stage 1 bootstraps the foundation only: modular Express API, Prisma/PostgreSQL, Socket.IO, Expo/React Native, navigation, state, React Query, API/socket clients, auth persistence skeletons, linting, formatting, and Docker support.
-
-No stock business logic, charts, Firebase, or polished UI has been implemented yet.
+This repository contains a modular Express API + Expo/React Native app for a stock alerts challenge, including auth, Prisma/PostgreSQL integration, and deployment-ready setup.
 
 ## Folder Structure
 
@@ -124,3 +122,21 @@ npm run lint --workspace frontend
 - The frontend separates navigation, server-state (`React Query`), local state (`Zustand`), API transport, socket transport, and auth persistence.
 - Placeholder screens are intentionally plain. Stage 1 is about project shape and integration points.
 
+## Alert Trigger Strategy (Challenge Scope)
+
+For this challenge, alert evaluation is handled manually via a `Check Alerts` action from the app, instead of a background scheduler.
+
+Why:
+
+- The backend runs on Render Free, where always-on periodic processing is not guaranteed.
+- This keeps the alert flow deterministic and easy to test during review.
+
+Current behavior:
+
+- Users create alerts normally.
+- Alerts are evaluated when `Check Alerts` is triggered.
+- Matching alerts are marked as triggered and returned in the response.
+
+Production note:
+
+- In a production setup, this should run via a dedicated worker or cron job (for example, Render Cron Job or a separate always-on worker service), and dispatch real-time notifications through Socket.IO or push notifications.

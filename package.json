@@ -9,12 +9,13 @@
     "lint": "npm run lint --workspace backend && npm run lint --workspace frontend",
     "format": "prettier --write \"**/*.{ts,tsx,js,json,md,yml,yaml}\"",
     "dev:backend": "npm run dev --workspace backend",
-    "dev:frontend": "npm run start --workspace frontend",
+    "dev:frontend": "cd frontend && npm run start",
     "docker:up": "docker compose up --build",
     "docker:down": "docker compose down"
   },
   "devDependencies": {
+    "@types/react": "~19.1.10",
+    "metro-runtime": "^0.84.4",
     "prettier": "^3.3.3"
   }
 }
-

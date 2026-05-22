@@ -16,6 +16,7 @@ authRouter.post('/login', async (req, res, next) => {
     const credentials = authCredentialsSchema.parse(req.body);
     const authResponse = await loginUser(credentials.email, credentials.password);
 
+    console.info(`User logged in: ${authResponse.user.email} (${authResponse.user.id})`);
     res.json(authResponse);
   } catch (error) {
     next(error);
@@ -27,6 +28,7 @@ authRouter.post('/register', async (req, res, next) => {
     const credentials = authCredentialsSchema.parse(req.body);
     const authResponse = await registerUser(credentials.email, credentials.password);
 
+    console.info(`User registered: ${authResponse.user.email} (${authResponse.user.id})`);
     res.status(201).json(authResponse);
   } catch (error) {
     next(error);

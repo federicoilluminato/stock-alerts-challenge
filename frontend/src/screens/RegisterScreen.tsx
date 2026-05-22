@@ -15,6 +15,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string>();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 
   const handleRegister = async () => {
     setError(undefined);
@@ -48,14 +49,20 @@ export const RegisterScreen = ({ navigation }: Props) => {
           style={styles.input}
           value={email}
         />
-        <TextInput
-          autoCapitalize="none"
-          onChangeText={setPassword}
-          placeholder="Password"
-          secureTextEntry
-          style={styles.input}
-          value={password}
-        />
+        <View style={styles.passwordField}>
+          <TextInput
+            autoCapitalize="none"
+            onChangeText={setPassword}
+            placeholder="Password"
+            secureTextEntry={!isPasswordVisible}
+            style={styles.passwordInput}
+            value={password}
+          />
+          <Button
+            title={isPasswordVisible ? 'Hide' : 'Show'}
+            onPress={() => setIsPasswordVisible((currentValue) => !currentValue)}
+          />
+        </View>
         {error ? <Text style={styles.error}>{error}</Text> : null}
         <Button
           disabled={isSubmitting}
@@ -82,6 +89,18 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     borderWidth: 1,
     paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  passwordField: {
+    alignItems: 'center',
+    borderColor: '#cbd5e1',
+    borderRadius: 6,
+    borderWidth: 1,
+    flexDirection: 'row',
+    paddingLeft: 12,
+  },
+  passwordInput: {
+    flex: 1,
     paddingVertical: 10,
   },
   error: {
