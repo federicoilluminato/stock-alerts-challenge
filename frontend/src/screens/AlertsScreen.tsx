@@ -1,4 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import axios from 'axios';
 import { ActivityIndicator, Alert as RNAlert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
@@ -20,8 +21,12 @@ export const AlertsScreen = ({ navigation }: Props) => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
-    onError: () => {
-      RNAlert.alert('Error', 'Failed to delete alert. Please try again.');
+    onError: (error) => {
+      console.log('[delete] Error:', JSON.stringify(error));
+      const message = axios.isAxiosError(error)
+        ? error.response?.data?.error?.message ?? error.message
+        : 'Failed to delete alert. Please try again.';
+      RNAlert.alert('Error', message);
     },
   });
 
