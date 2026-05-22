@@ -12,11 +12,16 @@ export class AppError extends Error {
 
 export const errorMiddleware: ErrorRequestHandler = (error, _req, res, _next) => {
   if (error instanceof ZodError) {
+    const details = error.flatten().fieldErrors;
+    const messages = Object.entries(details)
+      .map(([field, errors]) => `${field}: ${errors?.join(', ')}`)
+      .join('; ');
+
     return res.status(400).json({
       error: {
-        message: 'Invalid request body',
+        message: messages || 'Invalid request body',
         statusCode: 400,
-        details: error.flatten().fieldErrors,
+        details,
       },
     });
   }
