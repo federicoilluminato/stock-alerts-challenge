@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import { getStocks } from '../api/stocksApi';
 import { searchStocks, type StockListItem } from '../services/stocks/finnhub';
+import type { RootStackParamList } from '../navigation/types';
 
-export const StocksScreen = () => {
+type Props = NativeStackScreenProps<RootStackParamList, 'Stocks'>;
+
+export const StocksScreen = ({ navigation }: Props) => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
 
@@ -37,7 +41,10 @@ export const StocksScreen = () => {
 
   const renderStockItem = ({ item }: { item: StockListItem }) => {
     return (
-      <Pressable style={styles.stockCard}>
+      <Pressable
+        style={styles.stockCard}
+        onPress={() => navigation.navigate('StockDetail', { symbol: item.symbol, name: item.description })}
+      >
         <Text style={styles.stockSymbol}>{item.symbol}</Text>
         <Text style={styles.stockName}>{item.description}</Text>
         <Text style={styles.stockMeta}>
@@ -50,18 +57,26 @@ export const StocksScreen = () => {
   return (
     <ScreenContainer>
       <Text style={styles.title}>Stocks</Text>
-      <TextInput
-        autoCapitalize="characters"
-        onChangeText={setSearch}
-        placeholder="Type a symbol or company name (AAPL, Apple...)"
-        style={styles.searchInput}
-        value={search}
-      />
-      {!isSearching ? null : null}
+      <View style={styles.searchContainer}>
+        <Text style={styles.searchIcon}>🔍</Text>
+        <TextInput
+          autoCapitalize="characters"
+          onChangeText={setSearch}
+          placeholder="Search stocks..."
+          placeholderTextColor="#64748b"
+          style={styles.searchInput}
+          value={search}
+        />
+        {search.length > 0 ? (
+          <Pressable onPress={() => setSearch('')} style={styles.clearButton}>
+            <Text style={styles.clearIcon}>✕</Text>
+          </Pressable>
+        ) : null}
+      </View>
       {isLoading ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator />
-          <Text>{isSearching ? 'Searching stocks...' : 'Loading stocks...'}</Text>
+          <ActivityIndicator color="#60a5fa" />
+          <Text style={styles.stateText}>{isSearching ? 'Searching stocks...' : 'Loading stocks...'}</Text>
         </View>
       ) : null}
       {isError ? (
@@ -78,7 +93,7 @@ export const StocksScreen = () => {
           keyExtractor={(item) => item.symbol}
           renderItem={renderStockItem}
           contentContainerStyle={styles.listContent}
-          ListEmptyComponent={<Text>{isSearching ? 'No stocks found.' : 'No stocks available.'}</Text>}
+          ListEmptyComponent={<Text style={styles.stateText}>{isSearching ? 'No stocks found.' : 'No stocks available.'}</Text>}
         />
       ) : null}
     </ScreenContainer>
@@ -87,33 +102,52 @@ export const StocksScreen = () => {
 
 const styles = StyleSheet.create({
   title: {
+    color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
     marginBottom: 16,
   },
-  searchInput: {
-    borderColor: '#cbd5e1',
-    borderRadius: 6,
+  searchContainer: {
+    alignItems: 'center',
+    backgroundColor: '#1e204b',
+    borderColor: '#3b3f7a',
+    borderRadius: 8,
     borderWidth: 1,
+    flexDirection: 'row',
     marginBottom: 12,
     paddingHorizontal: 12,
+  },
+  searchIcon: {
+    fontSize: 16,
+    marginRight: 8,
+  },
+  searchInput: {
+    color: '#ffffff',
+    flex: 1,
     paddingVertical: 10,
   },
-  hint: {
-    color: '#64748b',
-    fontSize: 13,
-    marginBottom: 8,
+  clearButton: {
+    padding: 4,
+  },
+  clearIcon: {
+    color: '#94a3b8',
+    fontSize: 16,
+    fontWeight: '600',
   },
   centeredState: {
     alignItems: 'center',
     gap: 10,
     marginTop: 24,
   },
+  stateText: {
+    color: '#94a3b8',
+    fontSize: 14,
+  },
   errorText: {
-    color: '#b91c1c',
+    color: '#f87171',
   },
   retryButton: {
-    backgroundColor: '#0f172a',
+    backgroundColor: '#3b3f7a',
     borderRadius: 6,
     paddingHorizontal: 14,
     paddingVertical: 10,
@@ -127,24 +161,24 @@ const styles = StyleSheet.create({
     paddingBottom: 24,
   },
   stockCard: {
-    backgroundColor: '#f8fafc',
-    borderColor: '#e2e8f0',
-    borderRadius: 6,
+    backgroundColor: '#1e204b',
+    borderColor: '#3b3f7a',
+    borderRadius: 8,
     borderWidth: 1,
     padding: 12,
   },
   stockSymbol: {
-    color: '#0f172a',
+    color: '#60a5fa',
     fontSize: 16,
     fontWeight: '700',
   },
   stockName: {
-    color: '#1e293b',
+    color: '#e2e8f0',
     fontSize: 14,
     marginTop: 2,
   },
   stockMeta: {
-    color: '#64748b',
+    color: '#94a3b8',
     fontSize: 12,
     marginTop: 4,
   },

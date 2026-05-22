@@ -1,5 +1,5 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { Button, StyleSheet, Text } from 'react-native';
+import { Button, StyleSheet, Text, View } from 'react-native';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { useAuthStore } from '../state/auth.store';
@@ -16,18 +16,31 @@ export const HomeScreen = ({ navigation }: Props) => {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Home</Text>
-      <Button title="Stocks" onPress={() => navigation.navigate('Stocks')} />
-      <Button title="Alerts" onPress={() => navigation.navigate('Alerts')} />
-      <Button title="Logout" onPress={handleLogout} />
+      <View style={styles.content}>
+        <Text style={styles.title}>Stock Alerts</Text>
+        <View style={styles.actions}>
+          <Button color="#60a5fa" title="Stocks" onPress={() => navigation.navigate('Stocks')} />
+          <Button color="#60a5fa" title="Alerts" onPress={() => navigation.navigate('Alerts')} />
+          <Button color="#f87171" title="Logout" onPress={handleLogout} />
+        </View>
+      </View>
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 24,
+  },
   title: {
+    color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
-    marginBottom: 16,
+    textAlign: 'center',
+  },
+  actions: {
+    gap: 12,
   },
 });

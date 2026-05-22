@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import axios from 'axios';
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, Dimensions, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { authApi } from '../services/auth/authApi';
@@ -38,41 +38,63 @@ export const LoginScreen = ({ navigation }: Props) => {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Login</Text>
-      <View style={styles.form}>
-        <TextInput
-          autoCapitalize="none"
-          autoComplete="email"
-          keyboardType="email-address"
-          onChangeText={setEmail}
-          placeholder="Email"
-          style={styles.input}
-          value={email}
-        />
-        <View style={styles.passwordField}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Sign in</Text>
+        <View style={styles.form}>
           <TextInput
             autoCapitalize="none"
-            onChangeText={setPassword}
-            placeholder="Password"
-            secureTextEntry={!isPasswordVisible}
-            style={styles.passwordInput}
-            value={password}
+            autoComplete="email"
+            keyboardType="email-address"
+            onChangeText={setEmail}
+            placeholder="Email"
+            placeholderTextColor="#64748b"
+            style={styles.input}
+            value={email}
+          />
+          <View style={styles.passwordField}>
+            <TextInput
+              autoCapitalize="none"
+              onChangeText={setPassword}
+              placeholder="Password"
+              placeholderTextColor="#64748b"
+              secureTextEntry={!isPasswordVisible}
+              style={styles.passwordInput}
+              value={password}
+            />
+            <Button
+              color="#60a5fa"
+              title={isPasswordVisible ? 'Hide' : 'Show'}
+              onPress={() => setIsPasswordVisible((currentValue) => !currentValue)}
+            />
+          </View>
+          {error ? <Text style={styles.error}>{error}</Text> : null}
+          <Button
+            color="#60a5fa"
+            disabled={isSubmitting}
+            title={isSubmitting ? 'Signing in...' : 'Sign in'}
+            onPress={handleLogin}
           />
           <Button
-            title={isPasswordVisible ? 'Hide' : 'Show'}
-            onPress={() => setIsPasswordVisible((currentValue) => !currentValue)}
+            color="#60a5fa"
+            title="Create account"
+            onPress={() => navigation.navigate('Register')}
           />
         </View>
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-        <Button disabled={isSubmitting} title={isSubmitting ? 'Signing in...' : 'Sign in'} onPress={handleLogin} />
-        <Button title="Create account" onPress={() => navigation.navigate('Register')} />
+      </View>
+      <View style={styles.footer}>
+        <Image source={require('../assets/designli.png')} style={styles.logo} resizeMode="contain" />
       </View>
     </ScreenContainer>
   );
 };
 
 const styles = StyleSheet.create({
+  content: {
+    flex: 1,
+    justifyContent: 'center',
+  },
   title: {
+    color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
     marginBottom: 16,
@@ -81,6 +103,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   input: {
+    backgroundColor: '#ffffff',
     borderColor: '#cbd5e1',
     borderRadius: 6,
     borderWidth: 1,
@@ -89,6 +112,7 @@ const styles = StyleSheet.create({
   },
   passwordField: {
     alignItems: 'center',
+    backgroundColor: '#ffffff',
     borderColor: '#cbd5e1',
     borderRadius: 6,
     borderWidth: 1,
@@ -100,6 +124,15 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   error: {
-    color: '#b91c1c',
+    color: '#f87171',
+  },
+  footer: {
+    alignItems: 'center',
+    paddingBottom: 40,
+  },
+  logo: {
+    height: Dimensions.get('window').height * 0.4,
+    maxHeight: 240,
+    opacity: 0.6,
   },
 });
