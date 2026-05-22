@@ -14,7 +14,7 @@ type TriggeredAlert = {
   currentPrice: number;
 };
 
-const POLL_INTERVAL_MS = 60_000;
+const POLL_INTERVAL_MS = 30_000;
 
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
