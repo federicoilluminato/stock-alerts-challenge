@@ -70,9 +70,9 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
         </Text>
       </View>
       <View style={styles.rangeRow}>
-        <Text style={styles.rangeLabel}>L {quote.low.toFixed(2)}</Text>
-        <Text style={styles.rangeLabel}>O {quote.open.toFixed(2)}</Text>
-        <Text style={styles.rangeLabel}>H {quote.high.toFixed(2)}</Text>
+        <Text style={styles.rangeLabel}>Low {quote.low.toFixed(2)}</Text>
+        <Text style={styles.rangeLabel}>Open {quote.open.toFixed(2)}</Text>
+        <Text style={styles.rangeLabel}>High {quote.high.toFixed(2)}</Text>
       </View>
       {candles.length > 0 ? (
         <CandlestickChart data={candles} width={screenWidth - 48} />

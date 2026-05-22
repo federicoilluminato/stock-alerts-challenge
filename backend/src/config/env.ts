@@ -10,6 +10,9 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(16),
   CORS_ORIGIN: z.string().default('*'),
   FINNHUB_API_KEY: z.string(),
+  FIREBASE_PROJECT_ID: z.string().optional(),
+  FIREBASE_CLIENT_EMAIL: z.string().optional(),
+  FIREBASE_PRIVATE_KEY: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

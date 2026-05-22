@@ -49,7 +49,7 @@ export const AlertsScreen = ({ navigation }: Props) => {
               <View style={styles.alertInfo}>
                 <Text style={styles.alertSymbol}>{item.symbol}</Text>
                 <Text style={styles.alertDetail}>
-                  {item.direction === 'above' ? '>' : '<'} ${item.targetPrice.toFixed(2)}
+                  Target: ${item.targetPrice.toFixed(2)}
                 </Text>
                 <Text style={styles.alertStatus}>
                   {item.status === 'triggered' ? 'Triggered' : item.status === 'active' ? 'Active' : item.status}

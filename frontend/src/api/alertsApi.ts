@@ -4,7 +4,6 @@ export type Alert = {
   id: string;
   symbol: string;
   targetPrice: number;
-  direction: string;
   status: string;
   triggeredAt: string | null;
   createdAt: string;
@@ -13,7 +12,6 @@ export type Alert = {
 export type CreateAlertInput = {
   symbol: string;
   targetPrice: number;
-  direction?: 'above' | 'below';
 };
 
 export const fetchAlerts = async (): Promise<Alert[]> => {

@@ -6,6 +6,7 @@ import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { authApi } from '../services/auth/authApi';
 import { useAuthStore } from '../state/auth.store';
+import { registerForPushNotifications } from '../services/notifications/register';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
@@ -24,6 +25,7 @@ export const LoginScreen = ({ navigation }: Props) => {
     try {
       const authResponse = await authApi.login({ email, password });
       await setAccessToken(authResponse.accessToken);
+      registerForPushNotifications();
       navigation.replace('Home');
     } catch (caughtError) {
       const message = axios.isAxiosError(caughtError)

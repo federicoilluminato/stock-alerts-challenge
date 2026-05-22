@@ -5,7 +5,6 @@ export type AlertData = {
   id: string;
   symbol: string;
   targetPrice: number;
-  direction: string;
   status: string;
   triggeredAt: string | null;
   createdAt: string;
@@ -15,7 +14,6 @@ const toAlertData = (alert: {
   id: string;
   symbol: string;
   targetPrice: number;
-  direction: string;
   status: string;
   triggeredAt: Date | null;
   createdAt: Date;
@@ -23,7 +21,6 @@ const toAlertData = (alert: {
   id: alert.id,
   symbol: alert.symbol,
   targetPrice: alert.targetPrice,
-  direction: alert.direction,
   status: alert.status,
   triggeredAt: alert.triggeredAt?.toISOString() ?? null,
   createdAt: alert.createdAt.toISOString(),
@@ -40,14 +37,13 @@ export const listAlerts = async (userId: string): Promise<AlertData[]> => {
 
 export const createAlert = async (
   userId: string,
-  data: { symbol: string; targetPrice: number; direction?: string }
+  data: { symbol: string; targetPrice: number }
 ): Promise<AlertData> => {
   const alert = await prisma.alert.create({
     data: {
       userId,
       symbol: data.symbol.toUpperCase(),
       targetPrice: data.targetPrice,
-      direction: data.direction ?? 'above',
     },
   });
 

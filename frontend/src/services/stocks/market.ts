@@ -24,35 +24,27 @@ export type Quote = {
   changePercent: number;
 };
 
-const generateCandles = (quote: Quote, count: number): Candle[] => {
+const generateCandles = (currentPrice: number, count: number): Candle[] => {
   const candles: Candle[] = [];
   const now = Date.now();
-  let prevClose = quote.previousClose || quote.open || quote.current;
+  let prevClose = currentPrice;
 
   for (let i = count - 1; i >= 0; i--) {
     const timestamp = now - i * 86400 * 1000;
     const open = prevClose + (Math.random() - 0.5) * prevClose * 0.02;
-    const close = open + (Math.random() - 0.5) * open * 0.03;
+    const close = i === 0 ? currentPrice : open + (Math.random() - 0.5) * open * 0.03;
     const high = Math.max(open, close) + Math.random() * open * 0.015;
     const low = Math.min(open, close) - Math.random() * open * 0.015;
     candles.push({ timestamp, open, high, low, close });
     prevClose = close;
   }
 
-  candles[candles.length - 1] = {
-    ...candles[candles.length - 1],
-    open: quote.open || candles[candles.length - 1].open,
-    high: quote.high || candles[candles.length - 1].high,
-    low: quote.low || candles[candles.length - 1].low,
-    close: quote.current,
-  };
-
   return candles;
 };
 
 export const getCandles = async (symbol: string, _resolution = 'D', count = 30): Promise<Candle[]> => {
   const quote = await getQuote(symbol);
-  return generateCandles(quote, count);
+  return generateCandles(quote.current, count);
 };
 
 export const getQuote = async (symbol: string): Promise<Quote> => {

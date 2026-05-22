@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Line, Rect } from 'react-native-svg';
+import Svg, { G, Line, Rect } from 'react-native-svg';
 import type { Candle } from '../services/stocks/market';
 
 type Props = {
@@ -39,10 +39,10 @@ export const CandlestickChart = ({ data, width, height = 280 }: Props) => {
       const rectHeight = Math.max(Math.abs(yClose - yOpen), 1);
 
       return (
-        <g key={candle.timestamp}>
+        <G key={candle.timestamp}>
           <Line x1={xCenter} y1={yHigh} x2={xCenter} y2={yLow} stroke={color} strokeWidth={1} />
           <Rect x={x} y={rectY} width={CANDLE_WIDTH} height={rectHeight} fill={color} />
-        </g>
+        </G>
       );
     });
   }, [data, chartWidth, height]);

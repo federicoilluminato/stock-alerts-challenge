@@ -1,10 +1,12 @@
 import { useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { createAlert } from '../api/alertsApi';
+import { searchStocks } from '../services/stocks/finnhub';
+import { getQuote } from '../services/stocks/market';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlert'>;
 
@@ -12,9 +14,23 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
   const defaultSymbol = route.params?.symbol ?? '';
   const queryClient = useQueryClient();
 
-  const [symbol, setSymbol] = useState(defaultSymbol);
+  const [query, setQuery] = useState(defaultSymbol);
+  const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
+  const [selectedName, setSelectedName] = useState('');
   const [targetPrice, setTargetPrice] = useState('');
-  const [direction, setDirection] = useState<'above' | 'below'>('above');
+
+  const searchQuery = useQuery({
+    queryKey: ['stockSearch', query],
+    queryFn: () => searchStocks(query),
+    enabled: query.length >= 1 && query !== selectedSymbol,
+  });
+
+  const quoteQuery = useQuery({
+    queryKey: ['quote', selectedSymbol],
+    queryFn: () => getQuote(selectedSymbol),
+    enabled: selectedSymbol.length > 0,
+    staleTime: 30_000,
+  });
 
   const mutation = useMutation({
     mutationFn: createAlert,
@@ -24,24 +40,65 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
     },
   });
 
+  const handleSelectStock = (symbol: string, name: string) => {
+    setSelectedSymbol(symbol);
+    setSelectedName(name);
+    setQuery(symbol);
+    setTargetPrice('');
+  };
+
   const handleSubmit = () => {
     const price = parseFloat(targetPrice);
-    if (!symbol.trim()) return;
+    if (!selectedSymbol.trim()) return;
     if (isNaN(price) || price <= 0) return;
-    mutation.mutate({ symbol: symbol.trim().toUpperCase(), targetPrice: price, direction });
+    mutation.mutate({ symbol: selectedSymbol.trim().toUpperCase(), targetPrice: price });
   };
+
+  const currentPrice = quoteQuery.data?.current;
 
   return (
     <ScreenContainer>
       <Text style={styles.label}>Symbol</Text>
       <TextInput
         style={styles.input}
-        value={symbol}
-        onChangeText={setSymbol}
-        placeholder="e.g. AAPL"
+        value={query}
+        onChangeText={(text) => {
+          setQuery(text.toUpperCase());
+          if (text !== selectedSymbol) {
+            setSelectedSymbol('');
+            setSelectedName('');
+          }
+        }}
+        placeholder="Search stocks..."
         placeholderTextColor="#64748b"
         autoCapitalize="characters"
       />
+
+      {searchQuery.data && searchQuery.data.length > 0 && query !== selectedSymbol && (
+        <FlatList
+          data={searchQuery.data}
+          keyExtractor={(item) => item.symbol}
+          style={styles.searchResults}
+          renderItem={({ item }) => (
+            <Pressable style={styles.searchItem} onPress={() => handleSelectStock(item.symbol, item.description)}>
+              <Text style={styles.searchSymbol}>{item.symbol}</Text>
+              <Text style={styles.searchName} numberOfLines={1}>{item.description}</Text>
+            </Pressable>
+          )}
+        />
+      )}
+
+      {selectedSymbol.length > 0 && (
+        <View style={styles.priceContainer}>
+          <Text style={styles.selectedSymbol}>{selectedSymbol}</Text>
+          {selectedName.length > 0 && <Text style={styles.selectedName} numberOfLines={1}>{selectedName}</Text>}
+          {quoteQuery.isLoading ? (
+            <ActivityIndicator color="#60a5fa" size="small" />
+          ) : currentPrice !== undefined ? (
+            <Text style={styles.currentPrice}>${currentPrice.toFixed(2)}</Text>
+          ) : null}
+        </View>
+      )}
 
       <Text style={styles.label}>Target Price</Text>
       <TextInput
@@ -53,26 +110,10 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
         keyboardType="decimal-pad"
       />
 
-      <Text style={styles.label}>Direction</Text>
-      <View style={styles.directionRow}>
-        <Pressable
-          style={[styles.directionButton, direction === 'above' && styles.directionActive]}
-          onPress={() => setDirection('above')}
-        >
-          <Text style={[styles.directionText, direction === 'above' && styles.directionTextActive]}>Above</Text>
-        </Pressable>
-        <Pressable
-          style={[styles.directionButton, direction === 'below' && styles.directionActive]}
-          onPress={() => setDirection('below')}
-        >
-          <Text style={[styles.directionText, direction === 'below' && styles.directionTextActive]}>Below</Text>
-        </Pressable>
-      </View>
-
       <Pressable
         style={[styles.submitButton, mutation.isPending && styles.submitDisabled]}
         onPress={handleSubmit}
-        disabled={mutation.isPending}
+        disabled={mutation.isPending || !selectedSymbol}
       >
         {mutation.isPending ? (
           <ActivityIndicator color="#ffffff" />
@@ -106,29 +147,54 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  directionRow: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  directionButton: {
+  searchResults: {
+    backgroundColor: 'rgba(30,32,80,0.95)',
     borderColor: '#3b3f7a',
     borderRadius: 8,
     borderWidth: 1,
-    flex: 1,
+    marginTop: 4,
+    maxHeight: 180,
+  },
+  searchItem: {
+    borderBottomColor: '#3b3f7a',
+    borderBottomWidth: 1,
+    paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  directionActive: {
-    backgroundColor: 'rgba(96,165,250,0.2)',
-    borderColor: '#60a5fa',
+  searchSymbol: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  directionText: {
-    color: '#64748b',
-    fontSize: 16,
-    fontWeight: '500',
-    textAlign: 'center',
+  searchName: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginTop: 2,
   },
-  directionTextActive: {
+  priceContainer: {
+    alignItems: 'center',
+    backgroundColor: 'rgba(30,32,80,0.6)',
+    borderRadius: 8,
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  selectedSymbol: {
     color: '#60a5fa',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  selectedName: {
+    color: '#94a3b8',
+    flex: 1,
+    fontSize: 13,
+  },
+  currentPrice: {
+    color: '#22c55e',
+    fontSize: 16,
+    fontWeight: '600',
   },
   submitButton: {
     alignItems: 'center',

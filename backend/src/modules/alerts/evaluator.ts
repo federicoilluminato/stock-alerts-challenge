@@ -44,9 +44,7 @@ const evaluateAlerts = async (): Promise<void> => {
       const currentPrice = prices.get(alert.symbol);
       if (currentPrice === undefined) continue;
 
-      const shouldTrigger = alert.direction === 'above'
-        ? currentPrice >= alert.targetPrice
-        : currentPrice <= alert.targetPrice;
+      const shouldTrigger = currentPrice >= alert.targetPrice;
 
       if (shouldTrigger) {
         console.info(`[evaluator] Alert ${alert.id} triggered: ${alert.symbol} at $${currentPrice} (target: $${alert.targetPrice})`);
@@ -61,7 +59,7 @@ const evaluateAlerts = async (): Promise<void> => {
         });
 
         for (const t of tokens) {
-          await sendAlertTriggeredNotification(t.token, alert.symbol, currentPrice, alert.targetPrice, alert.direction);
+          await sendAlertTriggeredNotification(t.token, alert.symbol, currentPrice, alert.targetPrice, t.platform);
         }
       }
     }

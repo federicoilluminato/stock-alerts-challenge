@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { sendFcmNotification } from './firebase-admin.js';
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 
@@ -31,17 +32,15 @@ export const sendAlertTriggeredNotification = async (
   symbol: string,
   currentPrice: number,
   targetPrice: number,
-  direction: string
+  platform: string = 'expo',
 ): Promise<void> => {
-  const directionText = direction === 'above' ? 'above' : 'below';
+  const title = `Price Alert: ${symbol}`;
+  const body = `${symbol} hit $${currentPrice.toFixed(2)} (target: $${targetPrice.toFixed(2)})`;
+  const data = { type: 'alert_triggered', symbol };
 
-  await sendPushNotification({
-    to: pushToken,
-    title: `Price Alert: ${symbol}`,
-    body: `${symbol} is now $${currentPrice.toFixed(2)} (${directionText} your target of $${targetPrice.toFixed(2)})`,
-    data: {
-      type: 'alert_triggered',
-      symbol,
-    },
-  });
+  if (platform === 'fcm') {
+    await sendFcmNotification(pushToken, title, body, data);
+  } else {
+    await sendPushNotification({ to: pushToken, title, body, data });
+  }
 };

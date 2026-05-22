@@ -17,6 +17,8 @@
     "axios": "^1.7.9",
     "expo": "~54.0.34",
     "expo-dev-client": "~6.0.21",
+    "expo-device": "^56.0.4",
+    "expo-notifications": "^56.0.12",
     "expo-secure-store": "~15.0.8",
     "metro-runtime": "^0.83.7",
     "react": "19.1.0",
