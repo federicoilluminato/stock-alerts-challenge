@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import axios from 'axios';
 import { useState } from 'react';
-import { Button, Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { authApi } from '../services/auth/authApi';
@@ -84,7 +84,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         </View>
       </View>
       <View style={styles.footer}>
-        <Image source={require('../assets/designli.png')} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.logo}>Stock Alerts</Text>
       </View>
     </ScreenContainer>
   );
@@ -133,7 +133,9 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logo: {
-    height: 72,
+    color: '#ffffff',
+    fontSize: 18,
+    fontWeight: '600',
     opacity: 0.6,
   },
 });
