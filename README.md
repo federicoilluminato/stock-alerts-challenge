@@ -2,6 +2,8 @@
 
 Full-stack mobile app for stock price alerts with push notifications. Built with Expo/React Native (frontend) and Express/TypeScript (backend).
 
+> **Deployment Notes:** Backend hosted on [Render](https://render.com) free tier — the server spins down after inactivity, so the first request after a period of inactivity will take a few seconds while it cold-starts. PostgreSQL hosted on [Supabase](https://supabase.com). Finnhub API key (free tier) required for stock data.
+
 ## Features
 
 - **User Authentication** — Register/login with JWT, secure token storage via Expo SecureStore
@@ -28,13 +30,6 @@ Full-stack mobile app for stock price alerts with push notifications. Built with
 | APIs | Finnhub (stock data) |
 | Notifications | Expo Push API + Firebase Admin SDK |
 | Real-time | Socket.IO |
-| Hosting | Backend deployed on Render (free tier) |
-
-## Deployment Notes
-
-- **Backend**: Hosted on [Render](https://render.com) free tier. The server spins down after inactivity — the first request after a period of inactivity will take a few seconds to respond while it cold-starts.
-- **Database**: PostgreSQL hosted on [Supabase](https://supabase.com).
-- **API Keys Required**: Finnhub API key (free tier) for stock data.
 
 ## Folder Structure
 
