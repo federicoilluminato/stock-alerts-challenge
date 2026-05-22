@@ -20,7 +20,7 @@ const registerExpoPushToken = async (): Promise<void> => {
 
 const registerFcmToken = async (): Promise<void> => {
   try {
-    const { messaging } = await import('@react-native-firebase/messaging');
+    const { default: messaging } = await import('@react-native-firebase/messaging');
     const fcmToken = await messaging().getToken();
     console.log('[notifications] FCM token:', fcmToken);
 
