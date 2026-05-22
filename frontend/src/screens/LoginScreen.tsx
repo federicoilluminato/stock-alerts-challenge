@@ -1,7 +1,7 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import axios from 'axios';
 import { useState } from 'react';
-import { Button, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Button, Dimensions, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { authApi } from '../services/auth/authApi';
@@ -84,7 +84,7 @@ export const LoginScreen = ({ navigation }: Props) => {
         </View>
       </View>
       <View style={styles.footer}>
-        <Text style={styles.logo}>Stock Alerts</Text>
+        <Image source={require('../assets/designli.png')} style={styles.logo} resizeMode="contain" />
       </View>
     </ScreenContainer>
   );
@@ -133,9 +133,8 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   logo: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '600',
+    height: Dimensions.get('window').height * 0.4,
+    maxHeight: 80,
     opacity: 0.6,
   },
 });
