@@ -37,8 +37,7 @@ const registerFcmToken = async (): Promise<void> => {
 
 export const registerForPushNotifications = async (): Promise<void> => {
   if (!Device.isDevice) {
-    console.log('[notifications] Must use a physical device for push notifications');
-    return;
+    console.log('[notifications] Running on emulator — FCM may still work with Google Play Services');
   }
 
   if (Platform.OS === 'android') {
