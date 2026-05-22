@@ -22,11 +22,26 @@ export const AlertsScreen = ({ navigation }: Props) => {
       queryClient.invalidateQueries({ queryKey: ['alerts'] });
     },
     onError: (error) => {
-      console.log('[delete] Error:', JSON.stringify(error));
+      console.log('[delete] Error:', error instanceof Error ? error.message : error);
       const message = axios.isAxiosError(error)
         ? error.response?.data?.error?.message ?? error.message
-        : 'Failed to delete alert. Please try again.';
+        : error instanceof Error
+          ? error.message
+          : 'Failed to delete alert. Please try again.';
       RNAlert.alert('Error', message);
+    },
+  });
+
+  const evaluateMutation = useMutation({
+    mutationFn: evaluateAlerts,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      if (data.triggered.length > 0) {
+        const names = data.triggered.map((a) => `${a.symbol} ($${a.currentPrice.toFixed(2)})`).join('\n');
+        RNAlert.alert('Alerts Triggered!', names);
+      } else {
+        RNAlert.alert('No alerts triggered', 'All active alerts are below their target prices.');
+      }
     },
   });
 
