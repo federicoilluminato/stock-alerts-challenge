@@ -19,6 +19,8 @@
       }
     },
     "android": {
+      "package": "com.fedeillu.stockalertschallenge",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#0e1034"
       }
@@ -27,7 +29,8 @@
       "bundler": "metro"
     },
     "plugins": [
-      "expo-secure-store"
+      "expo-secure-store",
+      "@react-native-firebase/app"
     ],
     "extra": {
       "eas": {
