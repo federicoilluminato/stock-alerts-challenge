@@ -1,10 +1,12 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { ActivityIndicator, Alert as RNAlert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
-import { deleteAlert, evaluateAlerts, fetchAlerts } from '../api/alertsApi';
+import { apiClient } from '../api/client';
+import { evaluateAlerts, fetchAlerts } from '../api/alertsApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Alerts'>;
 
@@ -16,34 +18,7 @@ export const AlertsScreen = ({ navigation }: Props) => {
     queryFn: fetchAlerts,
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: deleteAlert,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['alerts'] });
-    },
-    onError: (error) => {
-      console.log('[delete] Error:', error instanceof Error ? error.message : error);
-      const message = axios.isAxiosError(error)
-        ? error.response?.data?.error?.message ?? error.message
-        : error instanceof Error
-          ? error.message
-          : 'Failed to delete alert. Please try again.';
-      RNAlert.alert('Error', message);
-    },
-  });
-
-  const evaluateMutation = useMutation({
-    mutationFn: evaluateAlerts,
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['alerts'] });
-      if (data.triggered.length > 0) {
-        const names = data.triggered.map((a) => `${a.symbol} ($${a.currentPrice.toFixed(2)})`).join('\n');
-        RNAlert.alert('Alerts Triggered!', names);
-      } else {
-        RNAlert.alert('No alerts triggered', 'All active alerts are below their target prices.');
-      }
-    },
-  });
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const handleDelete = (id: string, symbol: string) => {
     RNAlert.alert('Delete Alert', `Remove alert for ${symbol}?`, [
@@ -51,9 +26,44 @@ export const AlertsScreen = ({ navigation }: Props) => {
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => deleteMutation.mutate(id),
+        onPress: async () => {
+          setDeletingId(id);
+          try {
+            await apiClient.delete(`/alerts/${id}`);
+            queryClient.invalidateQueries({ queryKey: ['alerts'] });
+          } catch (error) {
+            const message = axios.isAxiosError(error)
+              ? error.response?.data?.error?.message ?? error.message
+              : error instanceof Error
+                ? error.message
+                : 'Failed to delete alert.';
+            RNAlert.alert('Error', message);
+          } finally {
+            setDeletingId(null);
+          }
+        },
       },
     ]);
+  };
+
+  const [checking, setChecking] = useState(false);
+
+  const handleCheckAlerts = async () => {
+    setChecking(true);
+    try {
+      const data = await evaluateAlerts();
+      queryClient.invalidateQueries({ queryKey: ['alerts'] });
+      if (data.triggered.length > 0) {
+        const names = data.triggered.map((a) => `${a.symbol} ($${a.currentPrice.toFixed(2)})`).join('\n');
+        RNAlert.alert('Alerts Triggered!', names);
+      } else {
+        RNAlert.alert('No alerts triggered', 'All active alerts are below their target prices.');
+      }
+    } catch {
+      RNAlert.alert('Error', 'Failed to check alerts.');
+    } finally {
+      setChecking(false);
+    }
   };
 
   const hasActiveAlerts = alerts?.some((a) => a.status === 'active');
@@ -73,11 +83,11 @@ export const AlertsScreen = ({ navigation }: Props) => {
         <>
           {hasActiveAlerts && (
             <Pressable
-              style={[styles.checkButton, evaluateMutation.isPending && styles.checkButtonDisabled]}
-              onPress={() => evaluateMutation.mutate()}
-              disabled={evaluateMutation.isPending}
+              style={[styles.checkButton, checking && styles.checkButtonDisabled]}
+              onPress={handleCheckAlerts}
+              disabled={checking}
             >
-              {evaluateMutation.isPending ? (
+              {checking ? (
                 <ActivityIndicator color="#ffffff" size="small" />
               ) : (
                 <Text style={styles.checkButtonText}>Check Alerts</Text>
@@ -99,8 +109,8 @@ export const AlertsScreen = ({ navigation }: Props) => {
                       {item.status === 'triggered' ? 'Triggered' : item.status === 'active' ? 'Active' : item.status}
                     </Text>
                   </View>
-                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)} disabled={deleteMutation.isPending}>
-                    {deleteMutation.isPending ? (
+                  <Pressable style={styles.deleteButton} onPress={() => handleDelete(item.id, item.symbol)} disabled={deletingId === item.id}>
+                    {deletingId === item.id ? (
                       <ActivityIndicator color="#f87171" size="small" />
                     ) : (
                       <Text style={styles.deleteButtonText}>X</Text>
