@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { LineChart } from 'react-native-chart-kit';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { useRealtimeStore } from '../state/realtime.store';
+import { fetchQuote, type StockQuote } from '../api/stocksApi';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
@@ -13,6 +15,17 @@ const POLL_INTERVAL_SECONDS = 60;
 
 const formatOptionalPrice = (value: number | undefined) => {
   return typeof value === 'number' ? `$${value.toFixed(2)}` : '-';
+};
+
+const getQuoteFields = (latestPrice: { open?: number; high?: number; low?: number; previousClose?: number; change?: number; changePercent?: number } | null, quoteQuery: { data?: StockQuote | null }): { open?: number; high?: number; low?: number; previousClose?: number; change?: number; changePercent?: number } => {
+  return {
+    open: latestPrice?.open ?? quoteQuery.data?.open,
+    high: latestPrice?.high ?? quoteQuery.data?.high,
+    low: latestPrice?.low ?? quoteQuery.data?.low,
+    previousClose: latestPrice?.previousClose ?? quoteQuery.data?.previousClose,
+    change: latestPrice?.change ?? quoteQuery.data?.change,
+    changePercent: latestPrice?.changePercent ?? quoteQuery.data?.changePercent,
+  };
 };
 
 export const StockDetailScreen = ({ route, navigation }: Props) => {
@@ -26,6 +39,13 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
   const requestHistory = useRealtimeStore((state) => state.requestHistory);
   const [now, setNow] = useState(Date.now());
 
+  const quoteQuery = useQuery({
+    queryKey: ['stockQuote', normalizedSymbol],
+    queryFn: () => fetchQuote(normalizedSymbol),
+    staleTime: 60_000,
+    retry: false,
+  });
+
   useEffect(() => {
     subscribe([normalizedSymbol]);
     requestHistory(normalizedSymbol);
@@ -36,6 +56,7 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
     return () => clearInterval(intervalId);
   }, []);
 
+  const quoteFields = getQuoteFields(latestPrice, quoteQuery);
   const chartPoints = history.length > 0 ? history : latestPrice ? [latestPrice] : [];
   const chartValues = chartPoints.map((point) => point.price);
   const hasFlatChart = chartValues.length >= 2 && chartValues.every((value) => value === chartValues[0]);
@@ -45,8 +66,8 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
   const latestChartPrice = latestPrice?.price ?? chartValues.at(-1);
   const secondsSinceLastTick = latestPrice ? Math.floor((now - latestPrice.timestamp) / 1000) : 0;
   const secondsUntilNextTick = latestPrice ? Math.max(POLL_INTERVAL_SECONDS - (secondsSinceLastTick % POLL_INTERVAL_SECONDS), 0) : POLL_INTERVAL_SECONDS;
-  const change = latestPrice?.change;
-  const changePercent = latestPrice?.changePercent;
+  const change = quoteFields.change;
+  const changePercent = quoteFields.changePercent;
   const isPositive = typeof change === 'number' ? change >= 0 : true;
 
   return (
@@ -54,9 +75,16 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
       <View style={styles.header}>
         <View style={styles.titleRow}>
           <Text style={styles.symbol}>{normalizedSymbol}</Text>
-          <Text style={[styles.connectionStatus, connected ? styles.connected : styles.disconnected]}>
-            {connected ? 'Live' : 'Offline'}
-          </Text>
+          <View style={styles.badgeStack}>
+            <Text style={[styles.connectionStatus, connected ? styles.connected : styles.disconnected]}>
+              {connected ? 'Live' : 'Offline'}
+            </Text>
+            {latestPrice ? (
+              <Text style={styles.tickBadge}>tick in {secondsUntilNextTick}s</Text>
+            ) : (
+              <Text style={styles.tickBadge}>waiting for tick</Text>
+            )}
+          </View>
         </View>
         <Text style={styles.name}>{name}</Text>
       </View>
@@ -71,24 +99,24 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
       <View style={styles.statsGrid}>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Open</Text>
-          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.open)}</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(quoteFields.open)}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>High</Text>
-          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.high)}</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(quoteFields.high)}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Low</Text>
-          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.low)}</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(quoteFields.low)}</Text>
         </View>
         <View style={styles.statCard}>
           <Text style={styles.statLabel}>Prev Close</Text>
-          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.previousClose)}</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(quoteFields.previousClose)}</Text>
         </View>
       </View>
       <Text style={styles.chartMeta}>
         {chartValues.length} realtime point{chartValues.length === 1 ? '' : 's'} received
-        {hasFlatChart ? ' - market price unchanged' : ''} · next tick in {secondsUntilNextTick}s
+        {hasFlatChart ? ' - market price unchanged' : ''}
       </Text>
       {chartValues.length >= 2 ? (
         <LineChart
@@ -137,6 +165,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
   },
+  badgeStack: {
+    alignItems: 'flex-end',
+  },
   connectionStatus: {
     borderRadius: 999,
     fontSize: 12,
@@ -152,6 +183,13 @@ const styles = StyleSheet.create({
   disconnected: {
     backgroundColor: 'rgba(248,113,113,0.16)',
     color: '#f87171',
+  },
+  tickBadge: {
+    color: '#94a3b8',
+    fontSize: 11,
+    fontWeight: '600',
+    marginTop: 3,
+    textAlign: 'right',
   },
   symbol: {
     color: '#ffffff',

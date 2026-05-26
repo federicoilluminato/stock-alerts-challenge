@@ -72,6 +72,7 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
     });
 
     socket.on('stock:price', (payload: StockPricePayload) => {
+      console.log('[realtime] stock:price received', JSON.stringify(payload));
       const symbol = payload.symbol.toUpperCase();
       const point = {
         price: payload.price,

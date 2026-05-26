@@ -41,6 +41,28 @@ type FinnhubStockSymbol = {
   type: string;
 };
 
+type FinnhubQuoteRaw = {
+  c?: number;
+  d?: number;
+  dp?: number;
+  h?: number;
+  l?: number;
+  o?: number;
+  pc?: number;
+  t?: number;
+};
+
+export type FinnhubQuote = {
+  price: number;
+  change: number;
+  changePercent: number;
+  high: number;
+  low: number;
+  open: number;
+  previousClose: number;
+  timestamp: number;
+};
+
 export type StockListItem = {
   symbol: string;
   displaySymbol: string;
@@ -127,6 +149,34 @@ class StockCache {
   invalidate(): void {
     this.data = null;
     this.expiresAt = 0;
+  }
+
+  async getQuote(symbol: string): Promise<FinnhubQuote | null> {
+    try {
+      const response = await finnhubClient.get<FinnhubQuoteRaw>('/quote', {
+        params: {
+          symbol,
+          token: env.FINNHUB_API_KEY,
+        },
+      });
+
+      if (!response.data.c || response.data.c <= 0) {
+        return null;
+      }
+
+      return {
+        price: response.data.c,
+        change: response.data.d ?? 0,
+        changePercent: response.data.dp ?? 0,
+        high: response.data.h ?? 0,
+        low: response.data.l ?? 0,
+        open: response.data.o ?? 0,
+        previousClose: response.data.pc ?? 0,
+        timestamp: Date.now(),
+      };
+    } catch {
+      return null;
+    }
   }
 
   async search(query: string): Promise<StockListItem[]> {
