@@ -4,6 +4,12 @@ import { priceCache, type PricePoint } from './price-cache.js';
 
 type QuoteResponse = {
   c?: number;
+  d?: number;
+  dp?: number;
+  h?: number;
+  l?: number;
+  o?: number;
+  pc?: number;
   t?: number;
 };
 
@@ -59,6 +65,12 @@ export const hydrateLatestPrices = async (symbols: string[], options: { force?: 
       const point = {
         price: response.data.c,
         timestamp: Date.now(),
+        open: response.data.o,
+        high: response.data.h,
+        low: response.data.l,
+        previousClose: response.data.pc,
+        change: response.data.d,
+        changePercent: response.data.dp,
       };
 
       priceCache.add(symbol, point);

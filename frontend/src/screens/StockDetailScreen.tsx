@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { LineChart } from 'react-native-chart-kit';
 import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -9,6 +9,11 @@ import { useRealtimeStore } from '../state/realtime.store';
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
 const EMPTY_HISTORY: [] = [];
+const POLL_INTERVAL_SECONDS = 60;
+
+const formatOptionalPrice = (value: number | undefined) => {
+  return typeof value === 'number' ? `$${value.toFixed(2)}` : '-';
+};
 
 export const StockDetailScreen = ({ route, navigation }: Props) => {
   const { symbol, name } = route.params;
@@ -19,11 +24,17 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
   const history = useRealtimeStore((state) => state.histories[normalizedSymbol] ?? EMPTY_HISTORY);
   const subscribe = useRealtimeStore((state) => state.subscribe);
   const requestHistory = useRealtimeStore((state) => state.requestHistory);
+  const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
     subscribe([normalizedSymbol]);
     requestHistory(normalizedSymbol);
   }, [normalizedSymbol, requestHistory, subscribe]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(intervalId);
+  }, []);
 
   const chartPoints = history.length > 0 ? history : latestPrice ? [latestPrice] : [];
   const chartValues = chartPoints.map((point) => point.price);
@@ -32,6 +43,11 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
     ? chartValues.map((value, index) => (index === 0 ? value * 0.999 : value))
     : chartValues;
   const latestChartPrice = latestPrice?.price ?? chartValues.at(-1);
+  const secondsSinceLastTick = latestPrice ? Math.floor((now - latestPrice.timestamp) / 1000) : 0;
+  const secondsUntilNextTick = latestPrice ? Math.max(POLL_INTERVAL_SECONDS - (secondsSinceLastTick % POLL_INTERVAL_SECONDS), 0) : POLL_INTERVAL_SECONDS;
+  const change = latestPrice?.change;
+  const changePercent = latestPrice?.changePercent;
+  const isPositive = typeof change === 'number' ? change >= 0 : true;
 
   return (
     <ScreenContainer>
@@ -46,10 +62,33 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
       </View>
       <View style={styles.quoteRow}>
         <Text style={styles.currentPrice}>{latestChartPrice ? `$${latestChartPrice.toFixed(2)}` : 'Waiting for realtime price'}</Text>
+        {typeof change === 'number' && typeof changePercent === 'number' ? (
+          <Text style={[styles.changeText, isPositive ? styles.positive : styles.negative]}>
+            {isPositive ? '+' : ''}{change.toFixed(2)} ({isPositive ? '+' : ''}{changePercent.toFixed(2)}%)
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.statsGrid}>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Open</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.open)}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>High</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.high)}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Low</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.low)}</Text>
+        </View>
+        <View style={styles.statCard}>
+          <Text style={styles.statLabel}>Prev Close</Text>
+          <Text style={styles.statValue}>{formatOptionalPrice(latestPrice?.previousClose)}</Text>
+        </View>
       </View>
       <Text style={styles.chartMeta}>
         {chartValues.length} realtime point{chartValues.length === 1 ? '' : 's'} received
-        {hasFlatChart ? ' - market price unchanged' : ''}
+        {hasFlatChart ? ' - market price unchanged' : ''} · next tick in {secondsUntilNextTick}s
       </Text>
       {chartValues.length >= 2 ? (
         <LineChart
@@ -62,13 +101,13 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
           chartConfig={{
             backgroundGradientFrom: '#1e204b',
             backgroundGradientTo: '#1e204b',
-            color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+            color: (opacity = 1) => `rgba(34, 197, 94, ${opacity})`,
             decimalPlaces: 2,
             labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
             propsForDots: {
               r: '2',
               strokeWidth: '1',
-              stroke: '#60a5fa',
+              stroke: '#22c55e',
             },
           }}
           bezier
@@ -128,12 +167,47 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 20,
+    marginBottom: 12,
   },
   currentPrice: {
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
+  },
+  changeText: {
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  positive: {
+    color: '#22c55e',
+  },
+  negative: {
+    color: '#ef4444',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 12,
+  },
+  statCard: {
+    backgroundColor: '#1e204b',
+    borderColor: '#3b3f7a',
+    borderRadius: 8,
+    borderWidth: 1,
+    flexGrow: 1,
+    minWidth: '47%',
+    padding: 10,
+  },
+  statLabel: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  statValue: {
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '700',
   },
   chartMeta: {
     color: '#94a3b8',

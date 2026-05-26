@@ -5,6 +5,12 @@ import { env } from '../config/env';
 export type PricePoint = {
   price: number;
   timestamp: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
 };
 
 type StockPricePayload = PricePoint & {
@@ -67,7 +73,16 @@ export const useRealtimeStore = create<RealtimeState>((set, get) => ({
 
     socket.on('stock:price', (payload: StockPricePayload) => {
       const symbol = payload.symbol.toUpperCase();
-      const point = { price: payload.price, timestamp: payload.timestamp };
+      const point = {
+        price: payload.price,
+        timestamp: payload.timestamp,
+        open: payload.open,
+        high: payload.high,
+        low: payload.low,
+        previousClose: payload.previousClose,
+        change: payload.change,
+        changePercent: payload.changePercent,
+      };
 
       set((state) => {
         const history = [...(state.histories[symbol] ?? []), point].slice(-50);

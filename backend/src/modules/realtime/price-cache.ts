@@ -1,6 +1,12 @@
 export type PricePoint = {
   price: number;
   timestamp: number;
+  open?: number;
+  high?: number;
+  low?: number;
+  previousClose?: number;
+  change?: number;
+  changePercent?: number;
 };
 
 const MAX_HISTORY_POINTS = 50;
