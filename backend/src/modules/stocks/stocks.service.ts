@@ -25,6 +25,14 @@ const DEMO_SYMBOL_PRIORITY = [
   'MU',
 ];
 
+const DEMO_STOCKS: StockListItem[] = DEMO_SYMBOL_PRIORITY.map((symbol) => ({
+  symbol,
+  displaySymbol: symbol,
+  description: symbol,
+  type: 'Common Stock',
+  currency: 'USD',
+}));
+
 type FinnhubStockSymbol = {
   currency: string;
   description: string;
@@ -74,15 +82,32 @@ class StockCache {
       return this.data;
     }
 
-    const response = await finnhubClient.get<Array<Partial<FinnhubStockSymbol>>>('/stock/symbol', {
-      params: {
-        exchange: 'US',
-        token: env.FINNHUB_API_KEY,
-        mic: 'XNAS',
-      },
-    });
+    let responseData: Array<Partial<FinnhubStockSymbol>>;
 
-    this.data = response.data
+    try {
+      const response = await finnhubClient.get<Array<Partial<FinnhubStockSymbol>>>('/stock/symbol', {
+        params: {
+          exchange: 'US',
+          token: env.FINNHUB_API_KEY,
+          mic: 'XNAS',
+        },
+      });
+
+      responseData = response.data;
+    } catch (error) {
+      if (this.data) {
+        console.warn('[stocks] Finnhub stock list failed; serving stale cache');
+        return this.data;
+      }
+
+      const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      console.warn('[stocks] Finnhub stock list failed; serving demo symbols', { status });
+      this.data = DEMO_STOCKS;
+      this.expiresAt = Date.now() + CACHE_TTL_MS;
+      return this.data;
+    }
+
+    this.data = responseData
       .map(normalizeStock)
       .filter((stock): stock is StockListItem => Boolean(stock))
       .filter((stock) => stock.type.toLowerCase().includes('common'))
