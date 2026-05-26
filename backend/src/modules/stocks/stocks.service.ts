@@ -2,6 +2,28 @@ import axios from 'axios';
 import { env } from '../../config/env.js';
 
 const CACHE_TTL_MS = 60 * 60 * 1000;
+const DEMO_SYMBOL_PRIORITY = [
+  'AAPL',
+  'MSFT',
+  'NVDA',
+  'TSLA',
+  'AMZN',
+  'META',
+  'GOOGL',
+  'AMD',
+  'NFLX',
+  'INTC',
+  'PYPL',
+  'ADBE',
+  'COST',
+  'PEP',
+  'CSCO',
+  'QCOM',
+  'AVGO',
+  'TXN',
+  'SBUX',
+  'MU',
+];
 
 type FinnhubStockSymbol = {
   currency: string;
@@ -38,6 +60,11 @@ const normalizeStock = (stock: Partial<FinnhubStockSymbol>): StockListItem | nul
   };
 };
 
+const getPriorityIndex = (symbol: string): number => {
+  const index = DEMO_SYMBOL_PRIORITY.indexOf(symbol);
+  return index === -1 ? Number.MAX_SAFE_INTEGER : index;
+};
+
 class StockCache {
   private data: StockListItem[] | null = null;
   private expiresAt = 0;
@@ -59,6 +86,10 @@ class StockCache {
       .map(normalizeStock)
       .filter((stock): stock is StockListItem => Boolean(stock))
       .filter((stock) => stock.type.toLowerCase().includes('common'))
+      .sort((leftStock, rightStock) => {
+        const priorityDiff = getPriorityIndex(leftStock.symbol) - getPriorityIndex(rightStock.symbol);
+        return priorityDiff === 0 ? leftStock.symbol.localeCompare(rightStock.symbol) : priorityDiff;
+      })
       .slice(0, 150);
 
     this.expiresAt = Date.now() + CACHE_TTL_MS;

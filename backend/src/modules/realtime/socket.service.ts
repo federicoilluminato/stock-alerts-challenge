@@ -33,7 +33,7 @@ const emitPrices = (prices: Record<string, { price: number; timestamp: number }>
   if (symbols.length > 0) {
     console.info('[realtime:socket] broadcasting prices', {
       count: symbols.length,
-      symbols,
+      prices: Object.fromEntries(Object.entries(prices).map(([symbol, point]) => [symbol, point.price])),
     });
   }
 

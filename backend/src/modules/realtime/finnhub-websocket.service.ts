@@ -19,6 +19,7 @@ const FINNHUB_WS_URL = `wss://ws.finnhub.io?token=${env.FINNHUB_API_KEY}`;
 const RECONNECT_BASE_DELAY_MS = 1_000;
 const RECONNECT_MAX_DELAY_MS = 30_000;
 const RATE_LIMIT_RECONNECT_DELAY_MS = 5 * 60 * 1000;
+const STABLE_CONNECTION_MS = 30_000;
 
 class FinnhubWebSocketService {
   private socket: WebSocket | null = null;
@@ -26,6 +27,7 @@ class FinnhubWebSocketService {
   private reconnectAttempt = 0;
   private stopped = true;
   private connecting = false;
+  private connectedAt = 0;
   private rateLimitedUntil = 0;
   private subscribedSymbols = new Set<string>();
   private listeners = new Set<PriceListener>();
@@ -102,7 +104,7 @@ class FinnhubWebSocketService {
     this.socket.on('open', () => {
       console.info('Finnhub WebSocket connected');
       this.connecting = false;
-      this.reconnectAttempt = 0;
+      this.connectedAt = Date.now();
       this.rateLimitedUntil = 0;
 
       for (const symbol of this.subscribedSymbols) {
@@ -122,8 +124,19 @@ class FinnhubWebSocketService {
       console.error('Finnhub WebSocket error', error);
     });
 
-    this.socket.on('close', () => {
-      console.warn('Finnhub WebSocket closed');
+    this.socket.on('close', (code, reason) => {
+      const connectedForMs = this.connectedAt ? Date.now() - this.connectedAt : 0;
+
+      console.warn('Finnhub WebSocket closed', {
+        code,
+        reason: reason.toString(),
+        connectedForMs,
+      });
+
+      if (connectedForMs >= STABLE_CONNECTION_MS) {
+        this.reconnectAttempt = 0;
+      }
+
       this.connecting = false;
       this.socket = null;
       this.scheduleReconnect();
