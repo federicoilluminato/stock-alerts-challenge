@@ -27,6 +27,10 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
 
   const chartPoints = history.length > 0 ? history : latestPrice ? [latestPrice] : [];
   const chartValues = chartPoints.map((point) => point.price);
+  const hasFlatChart = chartValues.length >= 2 && chartValues.every((value) => value === chartValues[0]);
+  const displayChartValues = hasFlatChart
+    ? chartValues.map((value, index) => (index === 0 ? value * 0.999 : value))
+    : chartValues;
   const latestChartPrice = latestPrice?.price ?? chartValues.at(-1);
 
   return (
@@ -43,11 +47,15 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
       <View style={styles.quoteRow}>
         <Text style={styles.currentPrice}>{latestChartPrice ? `$${latestChartPrice.toFixed(2)}` : 'Waiting for realtime price'}</Text>
       </View>
+      <Text style={styles.chartMeta}>
+        {chartValues.length} realtime point{chartValues.length === 1 ? '' : 's'} received
+        {hasFlatChart ? ' - market price unchanged' : ''}
+      </Text>
       {chartValues.length >= 2 ? (
         <LineChart
           data={{
             labels: chartPoints.map((_, index) => (index % 10 === 0 ? String(index + 1) : '')),
-            datasets: [{ data: chartValues }],
+            datasets: [{ data: displayChartValues }],
           }}
           width={screenWidth - 48}
           height={260}
@@ -126,6 +134,11 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
+  },
+  chartMeta: {
+    color: '#94a3b8',
+    fontSize: 12,
+    marginBottom: 8,
   },
   centeredState: {
     alignItems: 'center',
