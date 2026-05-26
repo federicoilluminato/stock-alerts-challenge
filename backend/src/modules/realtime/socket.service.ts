@@ -9,7 +9,7 @@ type SubscribePayload = {
   symbols?: string[];
 };
 
-const QUOTE_POLL_INTERVAL_MS = 60_000;
+const QUOTE_POLL_INTERVAL_MS = 30_000;
 const MAX_QUOTE_POLL_SYMBOLS = 5;
 
 let io: Server | null = null;

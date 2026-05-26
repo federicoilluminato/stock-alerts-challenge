@@ -11,7 +11,7 @@ import { fetchQuote, type StockQuote } from '../api/stocksApi';
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
 const EMPTY_HISTORY: [] = [];
-const POLL_INTERVAL_SECONDS = 60;
+const POLL_INTERVAL_SECONDS = 30;
 
 const formatOptionalPrice = (value: number | undefined) => {
   return typeof value === 'number' ? `$${value.toFixed(2)}` : '-';
@@ -42,7 +42,7 @@ export const StockDetailScreen = ({ route, navigation }: Props) => {
   const quoteQuery = useQuery({
     queryKey: ['stockQuote', normalizedSymbol],
     queryFn: () => fetchQuote(normalizedSymbol),
-    staleTime: 60_000,
+    staleTime: 30_000,
     retry: false,
   });
 
