@@ -67,6 +67,13 @@ class FinnhubWebSocketService {
       this.send({ type: 'subscribe', symbol });
     }
 
+    if (newSymbols.length > 0) {
+      console.info('[realtime:finnhub-ws] subscribed symbols added', {
+        added: newSymbols,
+        total: this.subscribedSymbols.size,
+      });
+    }
+
     if (this.subscribedSymbols.size > 0) {
       this.start();
     }
@@ -127,6 +134,9 @@ class FinnhubWebSocketService {
     const now = Date.now();
 
     if (this.rateLimitedUntil > now) {
+      console.warn('[realtime:finnhub-ws] reconnect delayed by rate limit', {
+        waitMs: this.rateLimitedUntil - now,
+      });
       this.scheduleReconnect(this.rateLimitedUntil - now);
       return;
     }
@@ -146,6 +156,10 @@ class FinnhubWebSocketService {
     if (message.type !== 'trade' || !Array.isArray(message.data)) {
       return;
     }
+
+    console.info('[realtime:finnhub-ws] trade message received', {
+      count: message.data.length,
+    });
 
     for (const trade of message.data) {
       if (!trade.s || typeof trade.p !== 'number') {

@@ -28,6 +28,15 @@ const normalizeSymbols = (symbols: unknown): string[] => {
 };
 
 const emitPrices = (prices: Record<string, { price: number; timestamp: number }>): void => {
+  const symbols = Object.keys(prices);
+
+  if (symbols.length > 0) {
+    console.info('[realtime:socket] broadcasting prices', {
+      count: symbols.length,
+      symbols,
+    });
+  }
+
   for (const [symbol, point] of Object.entries(prices)) {
     io?.to(`stock:${symbol}`).emit('stock:price', { symbol, ...point });
   }
@@ -42,13 +51,24 @@ const startQuotePolling = (): void => {
     const symbols = finnhubWebSocketService.getSubscribedSymbols().slice(0, MAX_QUOTE_POLL_SYMBOLS);
 
     if (symbols.length === 0) {
+      console.info('[realtime:poll] skipped; no subscribed symbols');
       return;
     }
+
+    console.info('[realtime:poll] polling fallback quotes', {
+      count: symbols.length,
+      symbols,
+    });
 
     hydrateLatestPrices(symbols, { force: true })
       .then(emitPrices)
       .catch((error: unknown) => console.warn('Failed to poll fallback quotes', error));
   }, QUOTE_POLL_INTERVAL_MS);
+
+  console.info('[realtime:poll] fallback quote polling started', {
+    intervalMs: QUOTE_POLL_INTERVAL_MS,
+    maxSymbols: MAX_QUOTE_POLL_SYMBOLS,
+  });
 };
 
 export const startRealtimeGateway = (httpServer: http.Server): void => {
@@ -60,17 +80,34 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
     cors: corsOptions,
   });
 
+  console.info('[realtime:socket] Socket.IO gateway started');
+
   unsubscribeFinnhubListener = finnhubWebSocketService.onPrice(({ symbol, point }) => {
+    console.info('[realtime:finnhub-ws] broadcasting websocket price', {
+      symbol,
+      price: point.price,
+    });
     io?.to(`stock:${symbol}`).emit('stock:price', { symbol, ...point });
   });
 
   io.on('connection', (socket) => {
-    console.info(`Socket.IO client connected ${socket.id}`);
+    console.info('[realtime:socket] client connected', {
+      socketId: socket.id,
+    });
 
     socket.on('stocks:subscribe', async (payload: SubscribePayload) => {
       const symbols = normalizeSymbols(payload?.symbols);
 
+      console.info('[realtime:socket] subscribe request received', {
+        socketId: socket.id,
+        count: symbols.length,
+        symbols,
+      });
+
       if (symbols.length === 0) {
+        console.warn('[realtime:socket] subscribe ignored; empty symbols', {
+          socketId: socket.id,
+        });
         return;
       }
 
@@ -84,9 +121,19 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
         prices: priceCache.getLatestForSymbols(symbols),
       });
 
+      console.info('[realtime:socket] cache snapshot emitted', {
+        socketId: socket.id,
+        count: Object.keys(priceCache.getLatestForSymbols(symbols)).length,
+      });
+
       const prices = await hydrateLatestPrices(symbols);
 
       socket.emit('stocks:snapshot', { prices });
+
+      console.info('[realtime:socket] hydrated snapshot emitted', {
+        socketId: socket.id,
+        count: Object.keys(prices).length,
+      });
 
       emitPrices(prices);
     });
@@ -95,8 +142,17 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
       const [symbol] = normalizeSymbols([payload?.symbol]);
 
       if (!symbol) {
+        console.warn('[realtime:socket] history request ignored; missing symbol', {
+          socketId: socket.id,
+        });
         return;
       }
+
+      console.info('[realtime:socket] history emitted', {
+        socketId: socket.id,
+        symbol,
+        points: priceCache.getHistory(symbol).length,
+      });
 
       socket.emit('stock:history', {
         symbol,
@@ -105,7 +161,9 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
     });
 
     socket.on('disconnect', () => {
-      console.info(`Socket.IO client disconnected ${socket.id}`);
+      console.info('[realtime:socket] client disconnected', {
+        socketId: socket.id,
+      });
     });
   });
 
