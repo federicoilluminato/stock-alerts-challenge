@@ -83,7 +83,8 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
     });
   });
 
-  finnhubWebSocketService.start();
+  // Finnhub allows only one WebSocket per API key. Open it lazily on first subscription,
+  // not on process boot, to avoid extra connections during Render deploy/cold-start cycles.
 };
 
 export const stopRealtimeGateway = (): void => {

@@ -18,22 +18,25 @@ type PriceListener = (payload: { symbol: string; point: PricePoint }) => void;
 const FINNHUB_WS_URL = `wss://ws.finnhub.io?token=${env.FINNHUB_API_KEY}`;
 const RECONNECT_BASE_DELAY_MS = 1_000;
 const RECONNECT_MAX_DELAY_MS = 30_000;
+const RATE_LIMIT_RECONNECT_DELAY_MS = 5 * 60 * 1000;
 
 class FinnhubWebSocketService {
   private socket: WebSocket | null = null;
   private reconnectTimer: NodeJS.Timeout | null = null;
   private reconnectAttempt = 0;
   private stopped = true;
+  private connecting = false;
+  private rateLimitedUntil = 0;
   private subscribedSymbols = new Set<string>();
   private listeners = new Set<PriceListener>();
 
   start(): void {
-    if (this.socket || !this.stopped) {
+    if (this.socket || this.connecting || !this.stopped) {
       return;
     }
 
     this.stopped = false;
-    this.connect();
+    this.connectOrWaitForRateLimit();
   }
 
   stop(): void {
@@ -63,6 +66,10 @@ class FinnhubWebSocketService {
       this.subscribedSymbols.add(symbol);
       this.send({ type: 'subscribe', symbol });
     }
+
+    if (this.subscribedSymbols.size > 0) {
+      this.start();
+    }
   }
 
   getSubscribedSymbols(): string[] {
@@ -70,12 +77,26 @@ class FinnhubWebSocketService {
   }
 
   private connect(): void {
+    if (this.connecting || this.socket) {
+      return;
+    }
+
+    this.connecting = true;
     console.info('Connecting to Finnhub WebSocket');
     this.socket = new WebSocket(FINNHUB_WS_URL);
 
+    this.socket.on('unexpected-response', (_request, response) => {
+      if (response.statusCode === 429) {
+        this.rateLimitedUntil = Date.now() + RATE_LIMIT_RECONNECT_DELAY_MS;
+        console.warn('Finnhub WebSocket rate limited; delaying reconnect for 5 minutes');
+      }
+    });
+
     this.socket.on('open', () => {
       console.info('Finnhub WebSocket connected');
+      this.connecting = false;
       this.reconnectAttempt = 0;
+      this.rateLimitedUntil = 0;
 
       for (const symbol of this.subscribedSymbols) {
         this.send({ type: 'subscribe', symbol });
@@ -87,14 +108,30 @@ class FinnhubWebSocketService {
     });
 
     this.socket.on('error', (error) => {
+      if (error.message.includes('429')) {
+        this.rateLimitedUntil = Date.now() + RATE_LIMIT_RECONNECT_DELAY_MS;
+      }
+
       console.error('Finnhub WebSocket error', error);
     });
 
     this.socket.on('close', () => {
       console.warn('Finnhub WebSocket closed');
+      this.connecting = false;
       this.socket = null;
       this.scheduleReconnect();
     });
+  }
+
+  private connectOrWaitForRateLimit(): void {
+    const now = Date.now();
+
+    if (this.rateLimitedUntil > now) {
+      this.scheduleReconnect(this.rateLimitedUntil - now);
+      return;
+    }
+
+    this.connect();
   }
 
   private handleMessage(rawMessage: string): void {
@@ -137,17 +174,20 @@ class FinnhubWebSocketService {
     this.socket.send(JSON.stringify(payload));
   }
 
-  private scheduleReconnect(): void {
+  private scheduleReconnect(forcedDelay?: number): void {
     if (this.stopped || this.reconnectTimer) {
       return;
     }
 
-    const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_DELAY_MS);
-    this.reconnectAttempt += 1;
+    const delay = forcedDelay ?? Math.min(RECONNECT_BASE_DELAY_MS * 2 ** this.reconnectAttempt, RECONNECT_MAX_DELAY_MS);
+
+    if (!forcedDelay) {
+      this.reconnectAttempt += 1;
+    }
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.connect();
+      this.connectOrWaitForRateLimit();
     }, delay);
   }
 }
