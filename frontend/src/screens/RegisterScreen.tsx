@@ -7,6 +7,7 @@ import type { RootStackParamList } from '../navigation/types';
 import { authApi } from '../services/auth/authApi';
 import { useAuthStore } from '../state/auth.store';
 import { registerForPushNotifications } from '../services/notifications/register';
+import designliLogo from '../assets/designli.png';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Register'>;
 
@@ -84,7 +85,7 @@ export const RegisterScreen = ({ navigation }: Props) => {
         </View>
       </View>
       <View style={styles.footer}>
-        <Image source={require('../assets/designli.png')} style={styles.logo} resizeMode="contain" />
+        <Image source={designliLogo} style={styles.logo} resizeMode="contain" />
       </View>
     </ScreenContainer>
   );

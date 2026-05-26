@@ -72,6 +72,22 @@ class StockCache {
     this.data = null;
     this.expiresAt = 0;
   }
+
+  async search(query: string): Promise<StockListItem[]> {
+    const normalizedQuery = query.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return [];
+    }
+
+    const stocks = await this.get();
+
+    return stocks.filter((stock) => {
+      return stock.symbol.toLowerCase().includes(normalizedQuery)
+        || stock.displaySymbol.toLowerCase().includes(normalizedQuery)
+        || stock.description.toLowerCase().includes(normalizedQuery);
+    });
+  }
 }
 
 export const stockCache = new StockCache();

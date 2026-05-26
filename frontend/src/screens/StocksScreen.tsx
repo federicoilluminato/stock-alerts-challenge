@@ -3,15 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
-import { getStocks } from '../api/stocksApi';
-import { searchStocks, type StockListItem } from '../services/stocks/finnhub';
+import { getStocks, searchStocks, type StockListItem } from '../api/stocksApi';
 import type { RootStackParamList } from '../navigation/types';
+import { useRealtimeStore } from '../state/realtime.store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Stocks'>;
 
 export const StocksScreen = ({ navigation }: Props) => {
   const [search, setSearch] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
+  const connected = useRealtimeStore((state) => state.connected);
+  const latestPrices = useRealtimeStore((state) => state.latestPrices);
+  const subscribe = useRealtimeStore((state) => state.subscribe);
 
   useEffect(() => {
     const timeoutId = setTimeout(() => {
@@ -39,13 +42,28 @@ export const StocksScreen = ({ navigation }: Props) => {
   const isError = isSearching ? searchQuery.isError : stocksQuery.isError;
   const refetch = isSearching ? searchQuery.refetch : stocksQuery.refetch;
 
+  useEffect(() => {
+    if (stocks.length === 0) {
+      return;
+    }
+
+    subscribe(stocks.slice(0, 40).map((stock) => stock.symbol));
+  }, [stocks, subscribe]);
+
   const renderStockItem = ({ item }: { item: StockListItem }) => {
+    const latestPrice = latestPrices[item.symbol]?.price;
+
     return (
       <Pressable
         style={styles.stockCard}
         onPress={() => navigation.navigate('StockDetail', { symbol: item.symbol, name: item.description })}
       >
-        <Text style={styles.stockSymbol}>{item.symbol}</Text>
+        <View style={styles.stockHeaderRow}>
+          <Text style={styles.stockSymbol}>{item.symbol}</Text>
+          <Text style={latestPrice ? styles.stockPrice : styles.waitingPrice}>
+            {latestPrice ? `$${latestPrice.toFixed(2)}` : 'Waiting for tick'}
+          </Text>
+        </View>
         <Text style={styles.stockName}>{item.description}</Text>
         <Text style={styles.stockMeta}>
           {item.displaySymbol} · {item.currency}
@@ -56,7 +74,12 @@ export const StocksScreen = ({ navigation }: Props) => {
 
   return (
     <ScreenContainer>
-      <Text style={styles.title}>Stocks</Text>
+      <View style={styles.titleRow}>
+        <Text style={styles.title}>Stocks</Text>
+        <Text style={[styles.connectionStatus, connected ? styles.connected : styles.disconnected]}>
+          {connected ? 'Live' : 'Offline'}
+        </Text>
+      </View>
       <View style={styles.searchContainer}>
         <Text style={styles.searchIcon}>🔍</Text>
         <TextInput
@@ -105,7 +128,28 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
+  },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     marginBottom: 16,
+  },
+  connectionStatus: {
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  connected: {
+    backgroundColor: 'rgba(34,197,94,0.18)',
+    color: '#22c55e',
+  },
+  disconnected: {
+    backgroundColor: 'rgba(248,113,113,0.16)',
+    color: '#f87171',
   },
   searchContainer: {
     alignItems: 'center',
@@ -167,10 +211,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     padding: 12,
   },
+  stockHeaderRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
   stockSymbol: {
     color: '#60a5fa',
     fontSize: 16,
     fontWeight: '700',
+  },
+  stockPrice: {
+    color: '#22c55e',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  waitingPrice: {
+    color: '#64748b',
+    fontSize: 12,
   },
   stockName: {
     color: '#e2e8f0',

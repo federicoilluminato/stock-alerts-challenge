@@ -1,84 +1,72 @@
-import { useQuery } from '@tanstack/react-query';
-import { ActivityIndicator, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import { useEffect } from 'react';
+import { LineChart } from 'react-native-chart-kit';
+import { Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
-import { CandlestickChart } from '../components/CandlestickChart';
 import type { RootStackParamList } from '../navigation/types';
-import { getCandles, getQuote } from '../services/stocks/market';
+import { useRealtimeStore } from '../state/realtime.store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
 export const StockDetailScreen = ({ route, navigation }: Props) => {
   const { symbol, name } = route.params;
   const { width: screenWidth } = useWindowDimensions();
+  const normalizedSymbol = symbol.toUpperCase();
+  const connected = useRealtimeStore((state) => state.connected);
+  const latestPrice = useRealtimeStore((state) => state.latestPrices[normalizedSymbol]);
+  const history = useRealtimeStore((state) => state.histories[normalizedSymbol] ?? []);
+  const subscribe = useRealtimeStore((state) => state.subscribe);
+  const requestHistory = useRealtimeStore((state) => state.requestHistory);
 
-  const candlesQuery = useQuery({
-    queryKey: ['candles', symbol],
-    queryFn: () => getCandles(symbol),
-  });
+  useEffect(() => {
+    subscribe([normalizedSymbol]);
+    requestHistory(normalizedSymbol);
+  }, [normalizedSymbol, requestHistory, subscribe]);
 
-  const quoteQuery = useQuery({
-    queryKey: ['quote', symbol],
-    queryFn: () => getQuote(symbol),
-  });
-
-  const isLoading = candlesQuery.isLoading || quoteQuery.isLoading;
-  const isError = candlesQuery.isError || quoteQuery.isError;
-
-  if (isLoading) {
-    return (
-      <ScreenContainer>
-        <View style={styles.centeredState}>
-          <ActivityIndicator color="#60a5fa" />
-          <Text style={styles.stateText}>Loading chart...</Text>
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  const errorMessage = candlesQuery.error instanceof Error ? candlesQuery.error.message
-    : quoteQuery.error instanceof Error ? quoteQuery.error.message
-    : 'Failed to load chart data';
-
-  if (isError) {
-    return (
-      <ScreenContainer>
-        <View style={styles.centeredState}>
-          <Text style={styles.errorText}>{errorMessage}</Text>
-          <Pressable style={styles.retryButton} onPress={() => { candlesQuery.refetch(); quoteQuery.refetch(); }}>
-            <Text style={styles.retryButtonText}>Retry</Text>
-          </Pressable>
-        </View>
-      </ScreenContainer>
-    );
-  }
-
-  const quote = quoteQuery.data!;
-  const candles = candlesQuery.data ?? [];
-  const isPositive = quote.change >= 0;
+  const chartPoints = history.length > 0 ? history : latestPrice ? [latestPrice] : [];
+  const chartValues = chartPoints.map((point) => point.price);
+  const latestChartPrice = latestPrice?.price ?? chartValues.at(-1);
 
   return (
     <ScreenContainer>
       <View style={styles.header}>
-        <Text style={styles.symbol}>{symbol}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.symbol}>{normalizedSymbol}</Text>
+          <Text style={[styles.connectionStatus, connected ? styles.connected : styles.disconnected]}>
+            {connected ? 'Live' : 'Offline'}
+          </Text>
+        </View>
         <Text style={styles.name}>{name}</Text>
       </View>
       <View style={styles.quoteRow}>
-        <Text style={styles.currentPrice}>${quote.current.toFixed(2)}</Text>
-        <Text style={[styles.change, isPositive ? styles.positive : styles.negative]}>
-          {isPositive ? '+' : ''}{quote.change.toFixed(2)} ({isPositive ? '+' : ''}{quote.changePercent.toFixed(2)}%)
-        </Text>
+        <Text style={styles.currentPrice}>{latestChartPrice ? `$${latestChartPrice.toFixed(2)}` : 'Waiting for realtime price'}</Text>
       </View>
-      <View style={styles.rangeRow}>
-        <Text style={styles.rangeLabel}>Low {quote.low.toFixed(2)}</Text>
-        <Text style={styles.rangeLabel}>Open {quote.open.toFixed(2)}</Text>
-        <Text style={styles.rangeLabel}>High {quote.high.toFixed(2)}</Text>
-      </View>
-      {candles.length > 0 ? (
-        <CandlestickChart data={candles} width={screenWidth - 48} />
+      {chartValues.length >= 2 ? (
+        <LineChart
+          data={{
+            labels: chartPoints.map((_, index) => (index % 10 === 0 ? String(index + 1) : '')),
+            datasets: [{ data: chartValues }],
+          }}
+          width={screenWidth - 48}
+          height={260}
+          chartConfig={{
+            backgroundGradientFrom: '#1e204b',
+            backgroundGradientTo: '#1e204b',
+            color: (opacity = 1) => `rgba(96, 165, 250, ${opacity})`,
+            decimalPlaces: 2,
+            labelColor: (opacity = 1) => `rgba(148, 163, 184, ${opacity})`,
+            propsForDots: {
+              r: '2',
+              strokeWidth: '1',
+              stroke: '#60a5fa',
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
       ) : (
         <View style={styles.centeredState}>
-          <Text style={styles.stateText}>No chart data available.</Text>
+          <Text style={styles.stateText}>Realtime chart will appear after two ticks.</Text>
         </View>
       )}
       <Pressable
@@ -95,6 +83,27 @@ const styles = StyleSheet.create({
   header: {
     marginBottom: 16,
   },
+  titleRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  connectionStatus: {
+    borderRadius: 999,
+    fontSize: 12,
+    fontWeight: '700',
+    overflow: 'hidden',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  connected: {
+    backgroundColor: 'rgba(34,197,94,0.18)',
+    color: '#22c55e',
+  },
+  disconnected: {
+    backgroundColor: 'rgba(248,113,113,0.16)',
+    color: '#f87171',
+  },
   symbol: {
     color: '#ffffff',
     fontSize: 32,
@@ -109,54 +118,26 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     flexDirection: 'row',
     gap: 12,
-    marginBottom: 4,
+    marginBottom: 20,
   },
   currentPrice: {
     color: '#ffffff',
     fontSize: 28,
     fontWeight: '600',
   },
-  change: {
-    fontSize: 16,
-    fontWeight: '500',
-  },
-  positive: {
-    color: '#22c55e',
-  },
-  negative: {
-    color: '#ef4444',
-  },
-  rangeRow: {
-    flexDirection: 'row',
-    gap: 16,
-    marginBottom: 20,
-  },
-  rangeLabel: {
-    color: '#64748b',
-    fontSize: 12,
-  },
   centeredState: {
     alignItems: 'center',
-    flex: 1,
     gap: 10,
     justifyContent: 'center',
+    minHeight: 260,
   },
   stateText: {
     color: '#94a3b8',
     fontSize: 14,
   },
-  errorText: {
-    color: '#f87171',
-  },
-  retryButton: {
-    backgroundColor: '#3b3f7a',
-    borderRadius: 6,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  retryButtonText: {
-    color: '#ffffff',
-    fontWeight: '600',
+  chart: {
+    borderRadius: 8,
+    marginVertical: 8,
   },
   alertButton: {
     alignItems: 'center',

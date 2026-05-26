@@ -11,3 +11,13 @@ stocksRouter.get('/', async (_req, res, next) => {
     next(error);
   }
 });
+
+stocksRouter.get('/search', async (req, res, next) => {
+  try {
+    const query = typeof req.query.q === 'string' ? req.query.q : '';
+    const stocks = await stockCache.search(query);
+    res.json(stocks);
+  } catch (error) {
+    next(error);
+  }
+});

@@ -12,8 +12,7 @@
       "distribution": "internal",
       "env": {
         "EXPO_PUBLIC_API_URL": "https://stock-alerts-challenge.onrender.com/api",
-        "EXPO_PUBLIC_SOCKET_URL": "https://stock-alerts-challenge.onrender.com",
-        "EXPO_PUBLIC_FINNHUB_API_KEY": "d87smh1r01qmhakh7nl0d87smh1r01qmhakh7nlg"
+        "EXPO_PUBLIC_SOCKET_URL": "https://stock-alerts-challenge.onrender.com"
       }
     },
     "production": {

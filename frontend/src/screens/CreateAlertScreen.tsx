@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -6,8 +6,8 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ScreenContainer } from './ScreenContainer';
 import type { RootStackParamList } from '../navigation/types';
 import { createAlert } from '../api/alertsApi';
-import { searchStocks } from '../services/stocks/finnhub';
-import { getQuote } from '../services/stocks/market';
+import { searchStocks } from '../api/stocksApi';
+import { useRealtimeStore } from '../state/realtime.store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CreateAlert'>;
 
@@ -19,6 +19,8 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
   const [selectedSymbol, setSelectedSymbol] = useState(defaultSymbol);
   const [selectedName, setSelectedName] = useState('');
   const [targetPrice, setTargetPrice] = useState('');
+  const latestPrices = useRealtimeStore((state) => state.latestPrices);
+  const subscribe = useRealtimeStore((state) => state.subscribe);
 
   const searchQuery = useQuery({
     queryKey: ['stockSearch', query],
@@ -26,12 +28,11 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
     enabled: query.length >= 1 && query !== selectedSymbol,
   });
 
-  const quoteQuery = useQuery({
-    queryKey: ['quote', selectedSymbol],
-    queryFn: () => getQuote(selectedSymbol),
-    enabled: selectedSymbol.length > 0,
-    staleTime: 30_000,
-  });
+  useEffect(() => {
+    if (selectedSymbol.length > 0) {
+      subscribe([selectedSymbol]);
+    }
+  }, [selectedSymbol, subscribe]);
 
   const mutation = useMutation({
     mutationFn: createAlert,
@@ -55,7 +56,7 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
     mutation.mutate({ symbol: selectedSymbol.trim().toUpperCase(), targetPrice: price });
   };
 
-  const currentPrice = quoteQuery.data?.current;
+  const currentPrice = latestPrices[selectedSymbol.toUpperCase()]?.price;
 
   return (
     <ScreenContainer>
@@ -93,11 +94,11 @@ export const CreateAlertScreen = ({ route, navigation }: Props) => {
         <View style={styles.priceContainer}>
           <Text style={styles.selectedSymbol}>{selectedSymbol}</Text>
           {selectedName.length > 0 && <Text style={styles.selectedName} numberOfLines={1}>{selectedName}</Text>}
-          {quoteQuery.isLoading ? (
-            <ActivityIndicator color="#60a5fa" size="small" />
-          ) : currentPrice !== undefined ? (
+          {currentPrice !== undefined ? (
             <Text style={styles.currentPrice}>${currentPrice.toFixed(2)}</Text>
-          ) : null}
+          ) : (
+            <Text style={styles.waitingPrice}>Waiting for tick</Text>
+          )}
         </View>
       )}
 
@@ -200,6 +201,10 @@ const styles = StyleSheet.create({
     color: '#22c55e',
     fontSize: 16,
     fontWeight: '600',
+  },
+  waitingPrice: {
+    color: '#64748b',
+    fontSize: 12,
   },
   submitButton: {
     alignItems: 'center',
