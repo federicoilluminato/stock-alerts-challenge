@@ -1,6 +1,7 @@
 import type http from 'http';
 import { Server } from 'socket.io';
 import { corsOptions } from '../../config/cors.js';
+import { hydrateLatestPrices } from './finnhub-quote.service.js';
 import { finnhubWebSocketService } from './finnhub-websocket.service.js';
 import { priceCache } from './price-cache.js';
 
@@ -38,7 +39,7 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
   io.on('connection', (socket) => {
     console.info(`Socket.IO client connected ${socket.id}`);
 
-    socket.on('stocks:subscribe', (payload: SubscribePayload) => {
+    socket.on('stocks:subscribe', async (payload: SubscribePayload) => {
       const symbols = normalizeSymbols(payload?.symbols);
 
       if (symbols.length === 0) {
@@ -54,6 +55,14 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
       socket.emit('stocks:snapshot', {
         prices: priceCache.getLatestForSymbols(symbols),
       });
+
+      const prices = await hydrateLatestPrices(symbols);
+
+      socket.emit('stocks:snapshot', { prices });
+
+      for (const [symbol, point] of Object.entries(prices)) {
+        io?.to(`stock:${symbol}`).emit('stock:price', { symbol, ...point });
+      }
     });
 
     socket.on('stock:history:get', (payload: { symbol?: string }) => {
