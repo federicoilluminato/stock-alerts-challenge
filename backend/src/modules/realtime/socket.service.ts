@@ -9,8 +9,12 @@ type SubscribePayload = {
   symbols?: string[];
 };
 
+const QUOTE_POLL_INTERVAL_MS = 30_000;
+const MAX_QUOTE_POLL_SYMBOLS = 20;
+
 let io: Server | null = null;
 let unsubscribeFinnhubListener: (() => void) | null = null;
+let quotePollTimer: NodeJS.Timeout | null = null;
 
 const normalizeSymbols = (symbols: unknown): string[] => {
   if (!Array.isArray(symbols)) {
@@ -21,6 +25,30 @@ const normalizeSymbols = (symbols: unknown): string[] => {
     .filter((symbol): symbol is string => typeof symbol === 'string')
     .map((symbol) => symbol.trim().toUpperCase())
     .filter(Boolean))];
+};
+
+const emitPrices = (prices: Record<string, { price: number; timestamp: number }>): void => {
+  for (const [symbol, point] of Object.entries(prices)) {
+    io?.to(`stock:${symbol}`).emit('stock:price', { symbol, ...point });
+  }
+};
+
+const startQuotePolling = (): void => {
+  if (quotePollTimer) {
+    return;
+  }
+
+  quotePollTimer = setInterval(() => {
+    const symbols = finnhubWebSocketService.getSubscribedSymbols().slice(0, MAX_QUOTE_POLL_SYMBOLS);
+
+    if (symbols.length === 0) {
+      return;
+    }
+
+    hydrateLatestPrices(symbols, { force: true })
+      .then(emitPrices)
+      .catch((error: unknown) => console.warn('Failed to poll fallback quotes', error));
+  }, QUOTE_POLL_INTERVAL_MS);
 };
 
 export const startRealtimeGateway = (httpServer: http.Server): void => {
@@ -60,9 +88,7 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
 
       socket.emit('stocks:snapshot', { prices });
 
-      for (const [symbol, point] of Object.entries(prices)) {
-        io?.to(`stock:${symbol}`).emit('stock:price', { symbol, ...point });
-      }
+      emitPrices(prices);
     });
 
     socket.on('stock:history:get', (payload: { symbol?: string }) => {
@@ -85,9 +111,15 @@ export const startRealtimeGateway = (httpServer: http.Server): void => {
 
   // Finnhub allows only one WebSocket per API key. Open it lazily on first subscription,
   // not on process boot, to avoid extra connections during Render deploy/cold-start cycles.
+  startQuotePolling();
 };
 
 export const stopRealtimeGateway = (): void => {
+  if (quotePollTimer) {
+    clearInterval(quotePollTimer);
+    quotePollTimer = null;
+  }
+
   unsubscribeFinnhubListener?.();
   unsubscribeFinnhubListener = null;
   finnhubWebSocketService.stop();

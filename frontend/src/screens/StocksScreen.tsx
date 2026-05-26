@@ -47,7 +47,7 @@ export const StocksScreen = ({ navigation }: Props) => {
       return;
     }
 
-    subscribe(stocks.slice(0, 40).map((stock) => stock.symbol));
+    subscribe(stocks.slice(0, 20).map((stock) => stock.symbol));
   }, [stocks, subscribe]);
 
   const renderStockItem = ({ item }: { item: StockListItem }) => {

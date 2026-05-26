@@ -12,10 +12,10 @@ const finnhubClient = axios.create({
   timeout: 10_000,
 });
 
-export const hydrateLatestPrices = async (symbols: string[]): Promise<Record<string, PricePoint>> => {
-  const missingSymbols = symbols.filter((symbol) => !priceCache.getLatest(symbol));
+export const hydrateLatestPrices = async (symbols: string[], options: { force?: boolean } = {}): Promise<Record<string, PricePoint>> => {
+  const symbolsToFetch = options.force ? symbols : symbols.filter((symbol) => !priceCache.getLatest(symbol));
 
-  const results = await Promise.allSettled(missingSymbols.map(async (symbol) => {
+  const results = await Promise.allSettled(symbolsToFetch.map(async (symbol) => {
     const response = await finnhubClient.get<QuoteResponse>('/quote', {
       params: {
         symbol,
@@ -29,7 +29,7 @@ export const hydrateLatestPrices = async (symbols: string[]): Promise<Record<str
 
     const point = {
       price: response.data.c,
-      timestamp: response.data.t ? response.data.t * 1000 : Date.now(),
+      timestamp: Date.now(),
     };
 
     priceCache.add(symbol, point);
