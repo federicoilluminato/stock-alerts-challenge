@@ -8,13 +8,15 @@ import { useRealtimeStore } from '../state/realtime.store';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'StockDetail'>;
 
+const EMPTY_HISTORY: [] = [];
+
 export const StockDetailScreen = ({ route, navigation }: Props) => {
   const { symbol, name } = route.params;
   const { width: screenWidth } = useWindowDimensions();
   const normalizedSymbol = symbol.toUpperCase();
   const connected = useRealtimeStore((state) => state.connected);
   const latestPrice = useRealtimeStore((state) => state.latestPrices[normalizedSymbol]);
-  const history = useRealtimeStore((state) => state.histories[normalizedSymbol] ?? []);
+  const history = useRealtimeStore((state) => state.histories[normalizedSymbol] ?? EMPTY_HISTORY);
   const subscribe = useRealtimeStore((state) => state.subscribe);
   const requestHistory = useRealtimeStore((state) => state.requestHistory);
 
