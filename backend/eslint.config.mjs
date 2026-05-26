@@ -5,14 +5,14 @@ export default tseslint.config(
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', 'tests/**/*.ts'],
     languageOptions: {
       globals: {
         console: 'readonly',
         process: 'readonly',
       },
       parserOptions: {
-        project: './tsconfig.json',
+          project: './tsconfig.eslint.json',
       },
     },
     rules: {
