@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "build": "tsc",
-    "postinstall": "prisma generate && prisma migrate deploy",
-    "start": "node dist/server.js",
+    "postinstall": "npx prisma generate",
+    "start": "npx prisma migrate deploy && node dist/server.js",
     "lint": "eslint \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "vitest run",
     "prisma:generate": "prisma generate",
